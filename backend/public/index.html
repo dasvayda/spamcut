@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>SpamGuard — 스팸 번호 조회·신고</title>
+  <meta name="description" content="모르는 번호 받으셨나요? 스팸 여부를 즉시 확인하고 신고하세요.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand:     #1565C0;
+      --brand-lt:  #1976D2;
+      --red:       #D32F2F;
+      --red-lt:    #FFEBEE;
+      --red-text:  #B71C1C;
+      --yellow:    #F9A825;
+      --yellow-lt: #FFFDE7;
+      --yellow-text: #E65100;
+      --green:     #388E3C;
+      --green-lt:  #E8F5E9;
+      --green-text:#1B5E20;
+      --gray-100:  #F5F5F5;
+      --gray-200:  #EEEEEE;
+      --gray-400:  #BDBDBD;
+      --gray-600:  #757575;
+      --gray-800:  #424242;
+      --white:     #FFFFFF;
+      --radius:    12px;
+      --shadow:    0 2px 8px rgba(0,0,0,0.10);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--gray-100);
+      color: var(--gray-800);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 헤더 */
+    header {
+      background: var(--brand);
+      color: var(--white);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    header .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    header .logo span { opacity: 0.7; font-weight: 400; font-size: 13px; margin-left: 6px; }
+    #headerUser { font-size: 13px; opacity: 0.9; cursor: pointer; }
+    #headerUser:hover { opacity: 1; }
+
+    /* 하단 탭 내비게이션 */
+    nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--gray-200);
+      display: flex;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    nav a {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 10px 4px;
+      text-decoration: none;
+      color: var(--gray-400);
+      font-size: 11px;
+      transition: color 0.15s;
+    }
+    nav a.active { color: var(--brand); }
+    nav a svg { width: 22px; height: 22px; }
+
+    /* 메인 컨텐츠 */
+    main {
+      flex: 1;
+      padding: 16px;
+      padding-bottom: 80px; /* 탭바 높이 */
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* 화면 전환 */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* 카드 */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* 입력 요소 */
+    input[type="text"], input[type="tel"], textarea, select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.15s;
+      background: var(--white);
+      color: var(--gray-800);
+    }
+    input:focus, textarea:focus { border-color: var(--brand); }
+    textarea { resize: vertical; min-height: 80px; }
+
+    /* 버튼 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      width: 100%;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--brand); color: var(--white); }
+    .btn-primary:hover:not(:disabled) { background: var(--brand-lt); }
+    .btn-red    { background: var(--red); color: var(--white); }
+    .btn-outline {
+      background: transparent;
+      color: var(--brand);
+      border: 1.5px solid var(--brand);
+    }
+    .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; }
+
+    /* 결과 카드 (번호 조회) */
+    .result-card {
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-top: 12px;
+      display: none;
+    }
+    .result-card.show { display: block; }
+    .result-card.red    { background: var(--red-lt);    border-left: 4px solid var(--red); }
+    .result-card.yellow { background: var(--yellow-lt); border-left: 4px solid var(--yellow); }
+    .result-card.safe   { background: var(--green-lt);  border-left: 4px solid var(--green); }
+    .result-label { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .result-label.red    { color: var(--red-text); }
+    .result-label.yellow { color: var(--yellow-text); }
+    .result-label.safe   { color: var(--green-text); }
+    .result-number { font-size: 14px; color: var(--gray-600); margin-bottom: 8px; }
+    .result-score  { font-size: 13px; color: var(--gray-600); margin-bottom: 12px; }
+
+    /* 태그 선택 (신고) */
+    .tag-group { display: flex; gap: 10px; margin-bottom: 14px; }
+    .tag-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: 2px solid var(--gray-200);
+      background: var(--white);
+      cursor: pointer;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .tag-btn.selected-red    { border-color: var(--red);    background: var(--red-lt);    color: var(--red-text); }
+    .tag-btn.selected-yellow { border-color: var(--yellow); background: var(--yellow-lt); color: var(--yellow-text); }
+
+    /* 리스트 아이템 */
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-item-main { font-size: 15px; font-weight: 500; }
+    .list-item-sub  { font-size: 12px; color: var(--gray-600); margin-top: 2px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .badge-pending   { background: #FFF3E0; color: #E65100; }
+    .badge-validated { background: var(--green-lt); color: var(--green-text); }
+    .badge-rejected  { background: #FAFAFA; color: var(--gray-600); }
+    .badge-red    { background: var(--red-lt); color: var(--red-text); }
+    .badge-yellow { background: var(--yellow-lt); color: var(--yellow-text); }
+
+    /* 지갑 큰 숫자 */
+    .wallet-balance {
+      text-align: center;
+      padding: 8px 0 16px;
+    }
+    .wallet-balance .amount {
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--brand);
+      line-height: 1;
+    }
+    .wallet-balance .unit {
+      font-size: 16px;
+      color: var(--gray-600);
+      margin-top: 4px;
+    }
+
+    /* 구독 상태 */
+    .sub-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .sub-status.active   { background: var(--green-lt); color: var(--green-text); }
+    .sub-status.inactive { background: var(--gray-100); color: var(--gray-600); }
+    .sub-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .sub-dot.active   { background: var(--green); }
+    .sub-dot.inactive { background: var(--gray-400); }
+
+    /* 초대 코드 박스 */
+    .invite-code-box {
+      background: var(--gray-100);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .invite-code { font-size: 20px; font-weight: 700; letter-spacing: 2px; color: var(--brand); }
+
+    /* 로그인 화면 */
+    .login-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 40px;
+    }
+    .login-icon { font-size: 48px; margin-bottom: 12px; }
+    .login-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .login-desc  { font-size: 14px; color: var(--gray-600); text-align: center; margin-bottom: 24px; }
+
+    /* 구분선 */
+    .divider {
+      height: 1px;
+      background: var(--gray-200);
+      margin: 16px 0;
+    }
+
+    /* 토스트 알림 */
+    #toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--gray-800);
+      color: var(--white);
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 200;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* 빈 상태 */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--gray-600);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
+    .empty-state p { font-size: 14px; }
+
+    /* 페이지 타이틀 */
+    .page-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--gray-800);
+    }
+
+    /* 유틸 */
+    .mt8  { margin-top: 8px; }
+    .mt12 { margin-top: 12px; }
+    .mt16 { margin-top: 16px; }
+    .row  { display: flex; gap: 8px; }
+    .row .btn { flex: 1; }
+    .label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 6px;
+    }
+    .input-group { margin-bottom: 14px; }
+
+    @media (min-width: 480px) {
+      nav { max-width: 480px; left: 50%; transform: translateX(-50%); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header>
+  <div class="logo">SpamGuard <span>스팸 번호 차단</span></div>
+  <div id="headerUser" onclick="handleHeaderUser()">로그인</div>
+</header>
+
+<!-- 메인 콘텐츠 -->
+<main>
+
+  <!-- 번호 조회 화면 -->
+  <div id="screen-lookup" class="screen active">
+    <p class="page-title">번호 조회</p>
+    <div class="card">
+      <div class="label">전화번호 입력</div>
+      <input type="tel" id="lookupInput" placeholder="+821012345678"
+        oninput="formatPhoneInput(this)"
+        onkeydown="if(event.key==='Enter') doLookup()">
+      <div class="mt12">
+        <button class="btn btn-primary" onclick="doLookup()" id="lookupBtn">조회하기</button>
+      </div>
+      <p style="font-size:12px;color:var(--gray-600);margin-top:8px;text-align:center">
+        국가 코드 포함 형식 &nbsp;·&nbsp; 예: +82 10-1234-5678
+      </p>
+    </div>
+
+    <div id="lookupResult" class="result-card">
+      <div class="result-label" id="resultLabel"></div>
+      <div class="result-number" id="resultNumber"></div>
+      <div class="result-score" id="resultScore"></div>
+      <button class="btn btn-outline btn-sm" onclick="goReportWith()" id="resultReportBtn">
+        이 번호 신고하기
+      </button>
+    </div>
+  </div>
+
+  <!-- 신고하기 화면 -->
+  <div id="screen-report" class="screen">
+    <p class="page-title">스팸 신고</p>
+    <div class="card">
+      <div class="input-group">
+        <div class="label">전화번호</div>
+        <input type="tel" id="reportPhone" placeholder="+821012345678"
+          oninput="formatPhoneInput(this)">
+      </div>
+      <div class="input-group">
+        <div class="label">신고 유형</div>
+        <div class="tag-group">
+          <div class="tag-btn" id="tagRed" onclick="selectTag('RED')">
+            위험 스팸<br>
+            <span style="font-size:11px;font-weight:400">피싱·불법·성인</span>
+          </div>
+          <div class="tag-btn" id="tagYellow" onclick="selectTag('YELLOW')">
+            마케팅 문자<br>
+            <span style="font-size:11px;font-weight:400">광고·홍보</span>
+          </div>
+        </div>
+      </div>
+      <div class="input-group">
+        <div class="label">설명 (선택)</div>
+        <textarea id="reportDesc" placeholder="어떤 내용의 문자였나요?"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="doReport()" id="reportBtn">신고 제출</button>
+    </div>
+    <div class="card" style="font-size:13px;color:var(--gray-600);line-height:1.6">
+      신고가 충분히 쌓이면 자동 검증되며, 검증 완료 시 Token이 지급됩니다.<br>
+      허위 신고는 계정 평판 점수를 낮춥니다.
+    </div>
+  </div>
+
+  <!-- 지갑 화면 -->
+  <div id="screen-wallet" class="screen">
+    <p class="page-title">지갑</p>
+    <div class="card">
+      <div class="wallet-balance">
+        <div class="amount" id="walletBalance">—</div>
+        <div class="unit">Token</div>
+      </div>
+      <div id="subStatus" class="sub-status inactive">
+        <div class="sub-dot inactive" id="subDot"></div>
+        <div id="subText">실시간 알림 비활성</div>
+      </div>
+      <button class="btn btn-primary" id="activateBtn" onclick="doActivate()">
+        30일 구독 활성화 (10 Token)
+      </button>
+      <div id="insufficientBalanceMsg" style="display:none;margin-top:12px;padding:12px;background:var(--yellow-lt);border-radius:8px;border:1px solid var(--yellow)">
+        <p style="font-size:13px;color:var(--yellow-text);margin-bottom:8px">
+          Token이 부족합니다. 친구를 초대하면 +3 Token을 받을 수 있습니다.
+        </p>
+        <button class="btn btn-outline btn-sm" onclick="navigate('invite')">초대하기</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Token 송금</div>
+      <div class="input-group">
+        <div class="label">받는 사람 전화번호</div>
+        <input type="tel" id="transferPhone" placeholder="+821098765432"
+          oninput="formatPhoneInput(this)">
+      </div>
+      <div class="input-group">
+        <div class="label">송금량</div>
+        <input type="text" id="transferAmount" placeholder="예: 3" inputmode="numeric">
+      </div>
+      <button class="btn btn-outline" onclick="doTransfer()">송금하기</button>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:0">최근 거래</div>
+        <a href="#" onclick="navigate('tx-history');return false"
+           style="font-size:13px;color:var(--brand);text-decoration:none">전체 보기</a>
+      </div>
+      <div id="txList"><div class="empty-state"><p>거래 내역이 없습니다</p></div></div>
+    </div>
+  </div>
+
+  <!-- 초대 화면 -->
+  <div id="screen-invite" class="screen">
+    <p class="page-title">친구 초대</p>
+    <div class="card">
+      <p style="font-size:14px;color:var(--gray-600);margin-bottom:16px;line-height:1.6">
+        친구를 초대하면 <strong>+3 Token</strong>을 받고,<br>
+        친구는 가입 즉시 <strong>+5 Token</strong>을 받습니다.
+      </p>
+      <button class="btn btn-primary" onclick="doGenerateInvite()" id="generateBtn">
+        초대 링크 생성
+      </button>
+    </div>
+
+    <div id="inviteCodeArea" style="display:none">
+      <div class="card">
+        <div class="card-title">초대 코드</div>
+        <div class="invite-code-box">
+          <div class="invite-code" id="inviteCodeDisplay"></div>
+          <button class="btn btn-outline btn-sm" onclick="copyInviteCode()">복사</button>
+        </div>
+        <button class="btn btn-primary" onclick="shareInviteLink()" id="shareBtn">
+          초대 링크 공유
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">내 초대 현황</div>
+      <div id="inviteStats" style="font-size:14px;color:var(--gray-600)">불러오는 중...</div>
+      <div id="inviteList" class="mt12"></div>
+    </div>
+  </div>
+
+  <!-- Token 거래 내역 화면 -->
+  <div id="screen-tx-history" class="screen">
+    <p class="page-title">Token 내역</p>
+    <div class="card" id="txHistoryList">
+      <div class="empty-state"><p>거래 내역이 없습니다</p></div>
+    </div>
+    <div id="txHistoryMore" style="display:none;margin-top:8px">
+      <button class="btn btn-outline" onclick="loadMoreTxHistory()">더 보기</button>
+    </div>
+  </div>
+
+  <!-- 내 신고 이력 화면 -->
+  <div id="screen-history" class="screen">
+    <p class="page-title">내 신고 이력</p>
+    <div class="card" id="historyList">
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <p>신고 이력이 없습니다</p>
+      </div>
+    </div>
+    <div id="historyMore" style="display:none;margin-top:8px">
+      <button class="btn btn-outline" onclick="loadMoreHistory()">더 보기</button>
+    </div>
+  </div>
+
+  <!-- 로그인/가입 화면 -->
+  <div id="screen-login" class="screen">
+    <div class="login-wrap">
+      <div class="login-icon">🛡️</div>
+      <div class="login-title">SpamGuard</div>
+      <div class="login-desc">
+        전화번호로 바로 시작하세요.<br>별도 인증 없이 즉시 사용 가능합니다.
+      </div>
+      <div class="card" style="width:100%">
+        <div class="input-group">
+          <div class="label">전화번호 (국가 코드 포함)</div>
+          <input type="tel" id="loginPhone" placeholder="+821012345678"
+            oninput="formatPhoneInput(this)"
+            onkeydown="if(event.key==='Enter') doLogin()">
+        </div>
+        <button class="btn btn-primary" onclick="doLogin()" id="loginBtn">시작하기</button>
+        <p style="font-size:12px;color:var(--gray-600);margin-top:10px;text-align:center">
+          가입한 적 없으면 자동으로 계정이 만들어집니다
+        </p>
+      </div>
+      <div id="inviteNoteLogin" style="display:none;width:100%">
+        <div class="card" style="background:var(--yellow-lt);border:1px solid var(--yellow)">
+          <p style="font-size:14px;color:var(--yellow-text);font-weight:600">
+            초대 링크로 접속했습니다<br>
+            <span style="font-weight:400">가입 완료 시 보너스 Token을 받습니다</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- 하단 탭 내비게이션 -->
+<nav id="mainNav">
+  <a href="#" onclick="navigate('lookup')" id="tab-lookup" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    조회
+  </a>
+  <a href="#" onclick="navigate('report')" id="tab-report">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    </svg>
+    신고
+  </a>
+  <a href="#" onclick="navigate('wallet')" id="tab-wallet">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="2" y="5" width="20" height="14" rx="2"/>
+      <path d="M16 12h.01"/>
+    </svg>
+    지갑
+  </a>
+  <a href="#" onclick="navigate('invite')" id="tab-invite">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M19 8v6m-3-3h6"/>
+    </svg>
+    초대
+  </a>
+  <a href="#" onclick="navigate('history')" id="tab-history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+    </svg>
+    이력
+  </a>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// 상태
+// ─────────────────────────────────────────────
+const state = {
+  token:       localStorage.getItem('sg_token'),
+  phone:       localStorage.getItem('sg_phone'),
+  inviteCode:  null,       // URL에서 읽은 초대 코드
+  reportTag:   null,       // 신고 화면 선택 태그
+  histCursor:  null,       // 이력 페이지 커서
+  walletData:  null,       // 마지막 로드된 지갑 데이터
+}
+
+// ─────────────────────────────────────────────
+// API 헬퍼
+// ─────────────────────────────────────────────
+const API = ''  // 같은 오리진 — 상대 경로 사용
+
+async function apiFetch(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) }
+  if (state.token) headers['Authorization'] = `Bearer ${state.token}`
+
+  const res = await fetch(API + path, { ...options, headers })
+  const data = await res.json().catch(() => ({}))
+
+  if (res.status === 401) {
+    clearSession()
+    navigate('login')
+    throw new Error('로그인이 필요합니다')
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+// ─────────────────────────────────────────────
+// 세션
+// ─────────────────────────────────────────────
+function saveSession(token, phone) {
+  state.token = token
+  state.phone = phone
+  localStorage.setItem('sg_token', token)
+  localStorage.setItem('sg_phone', phone)
+  updateHeaderUser()
+}
+
+function clearSession() {
+  state.token = null
+  state.phone = null
+  localStorage.removeItem('sg_token')
+  localStorage.removeItem('sg_phone')
+  updateHeaderUser()
+}
+
+function updateHeaderUser() {
+  const el = document.getElementById('headerUser')
+  el.textContent = state.phone ? formatPhoneDisplay(state.phone) : '로그인'
+}
+
+function handleHeaderUser() {
+  if (state.token) {
+    if (confirm(`${state.phone}\n로그아웃 하시겠습니까?`)) {
+      clearSession()
+      navigate('lookup')
+      toast('로그아웃 되었습니다')
+    }
+  } else {
+    navigate('login')
+  }
+}
+
+// ─────────────────────────────────────────────
+// 라우터 (hash 기반)
+// ─────────────────────────────────────────────
+const PROTECTED = ['report', 'wallet', 'invite', 'history', 'tx-history']
+let _afterLogin = null  // 로그인 후 이동할 화면
+
+function navigate(screen, opts = {}) {
+  if (PROTECTED.includes(screen) && !state.token) {
+    _afterLogin = screen
+    screen = 'login'
+  }
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'))
+
+  const scr = document.getElementById(`screen-${screen}`)
+  if (scr) scr.classList.add('active')
+
+  const tab = document.getElementById(`tab-${screen}`)
+  if (tab) tab.classList.add('active')
+
+  window.location.hash = screen === 'lookup' ? '' : screen
+
+  // 화면별 데이터 로드
+  if (screen === 'wallet')     loadWallet()
+  if (screen === 'invite')     loadInviteStats()
+  if (screen === 'history')    loadHistory(true)
+  if (screen === 'tx-history') loadTxHistory(true)
+
+  return false
+}
+
+// 초기 화면 결정
+function initRoute() {
+  // URL 초대 코드 파싱: ?code=XXXX 또는 #invite?code=XXXX 형태 모두 처리
+  const urlParams = new URLSearchParams(window.location.search)
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#[^?]*\??/, ''))
+  state.inviteCode = urlParams.get('code') || hashParams.get('code') || null
+
+  if (state.inviteCode) {
+    document.getElementById('inviteNoteLogin').style.display = 'block'
+  }
+
+  const hash = window.location.hash.replace('#', '').split('?')[0]
+  const screen = ['lookup','report','wallet','invite','history','tx-history','login'].includes(hash) ? hash : 'lookup'
+  navigate(screen)
+  updateHeaderUser()
+}
+
+window.addEventListener('hashchange', () => {
+  const hash = window.location.hash.replace('#', '').split('?')[0]
+  if (hash) navigate(hash)
+})
+
+// ─────────────────────────────────────────────
+// 번호 조회
+// ─────────────────────────────────────────────
+let _lastLookedUp = ''
+
+async function doLookup() {
+  const num = document.getElementById('lookupInput').value.trim()
+  if (!validateE164(num)) { toast('국가 코드 포함 형식으로 입력하세요 (예: +821012345678)'); return }
+
+  const btn = document.getElementById('lookupBtn')
+  btn.disabled = true
+  btn.textContent = '조회 중...'
+  _lastLookedUp = num
+
+  try {
+    const { ok, data } = await apiFetch(`/api/v1/check-spam?number=${encodeURIComponent(num)}`)
+    if (!ok) { toast('조회 중 오류가 발생했습니다'); return }
+
+    showLookupResult(num, data)
+  } catch (e) {
+    toast('네트워크 오류. 잠시 후 다시 시도하세요')
+  } finally {
+    btn.disabled = false
+    btn.textContent = '조회하기'
+  }
+}
+
+function showLookupResult(number, data) {
+  const card   = document.getElementById('lookupResult')
+  const label  = document.getElementById('resultLabel')
+  const numEl  = document.getElementById('resultNumber')
+  const score  = document.getElementById('resultScore')
+
+  card.className = 'result-card show'
+
+  if (!data.isSpam) {
+    card.classList.add('safe')
+    label.className = 'result-label safe'
+    label.textContent = '등록된 스팸 정보 없음'
+    numEl.textContent = number
+    score.textContent = '현재 신고된 내역이 없습니다. 의심스러우면 신고해 주세요.'
+  } else {
+    const isRed = data.tagType === 'RED'
+    card.classList.add(isRed ? 'red' : 'yellow')
+    label.className = `result-label ${isRed ? 'red' : 'yellow'}`
+    label.textContent = isRed ? '위험 스팸 번호' : '마케팅 문자 번호'
+    numEl.textContent = number
+    score.textContent = `신뢰도 점수: ${data.score ?? '—'}`
+  }
+}
+
+function goReportWith() {
+  document.getElementById('reportPhone').value = _lastLookedUp
+  navigate('report')
+}
+
+// ─────────────────────────────────────────────
+// 신고
+// ─────────────────────────────────────────────
+function selectTag(tag) {
+  state.reportTag = tag
+  document.getElementById('tagRed').className    = 'tag-btn' + (tag === 'RED'    ? ' selected-red'    : '')
+  document.getElementById('tagYellow').className = 'tag-btn' + (tag === 'YELLOW' ? ' selected-yellow' : '')
+}
+
+async function doReport() {
+  const phone = document.getElementById('reportPhone').value.trim()
+  const desc  = document.getElementById('reportDesc').value.trim()
+
+  if (!validateE164(phone))  { toast('올바른 전화번호를 입력하세요'); return }
+  if (!state.reportTag)      { toast('신고 유형을 선택하세요'); return }
+
+  const btn = document.getElementById('reportBtn')
+  btn.disabled = true
+  btn.textContent = '제출 중...'
+
+  try {
+    const { ok, status, data } = await apiFetch('/api/v1/report', {
+      method: 'POST',
+      body: JSON.stringify({ phone_number: phone, tag_type: state.reportTag, description: desc || null }),
+    })
+
+    if (ok) {
+      toast('신고가 접수되었습니다. 검증 완료 시 Token이 지급됩니다.')
+      document.getElementById('reportPhone').value = ''
+      document.getElementById('reportDesc').value  = ''
+      selectTag(null)
+      state.reportTag = null
+    } else if (status === 429) {
+      toast('오늘 신고 한도(20건)를 초과했습니다')
+    } else if (status === 409) {
+      toast('같은 번호를 이미 신고했습니다 (24시간 이내)')
+    } else {
+      toast(`오류: ${data.error || '알 수 없는 오류'}`)
+    }
+  } catch (e) {
+    toast('네트워크 오류. 잠시 후 다시 시도하세요')
+  } finally {
+    btn.disabled = false
+    btn.textContent = '신고 제출'
+  }
+}
+
+// ─────────────────────────────────────────────
+// 지갑
+// ─────────────────────────────────────────────
+async function loadWallet() {
+  try {
+    const { ok, data } = await apiFetch('/api/v1/wallet')
+    if (!ok) return
+    state.walletData = data
+
+    document.getElementById('walletBalance').textContent = data.balance ?? 0
+
+    const sub     = data.subscription
+    const isActive = sub?.is_active
+    const dot     = document.getElementById('subDot')
+    const text    = document.getElementById('subText')
+    const statusEl = document.getElementById('subStatus')
+    const activateBtn = document.getElementById('activateBtn')
+
+    if (isActive) {
+      statusEl.className = 'sub-status active'
+      dot.className      = 'sub-dot active'
+      text.textContent   = `실시간 알림 활성 · ${sub.days_remaining}일 남음`
+      activateBtn.textContent = `구독 연장 (10 Token)`
+    } else {
+      statusEl.className = 'sub-status inactive'
+      dot.className      = 'sub-dot inactive'
+      text.textContent   = '실시간 알림 비활성 (Android 앱 전용)'
+      activateBtn.textContent = '30일 구독 활성화 (10 Token)'
+    }
+    const hasEnough = (data.balance ?? 0) >= 10
+    activateBtn.disabled = !hasEnough
+    document.getElementById('insufficientBalanceMsg').style.display = hasEnough ? 'none' : 'block'
+
+    // 거래 내역
+    const txList = document.getElementById('txList')
+    const txs = data.recent_transactions ?? []
+    if (txs.length === 0) {
+      txList.innerHTML = '<div class="empty-state"><p>거래 내역이 없습니다</p></div>'
+    } else {
+      txList.innerHTML = txs.map(tx => {
+        const sign  = ['EARN','TRANSFER_IN'].includes(tx.transaction_type) ? '+' : '-'
+        const color = sign === '+' ? 'var(--green-text)' : 'var(--red-text)'
+        const label = { EARN:'신고 보상', BURN:'구독 소모', TRANSFER_OUT:'송금', TRANSFER_IN:'수신' }[tx.transaction_type] ?? tx.transaction_type
+        const date  = new Date(tx.created_at).toLocaleDateString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+        return `<div class="list-item">
+          <div>
+            <div class="list-item-main">${label}</div>
+            <div class="list-item-sub">${date}</div>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:${color}">${sign}${tx.amount}</div>
+        </div>`
+      }).join('')
+    }
+  } catch (e) {
+    // 오프라인 무시
+  }
+}
+
+async function doActivate() {
+  if (!confirm('10 Token을 소모하여 30일 구독을 활성화하시겠습니까?')) return
+
+  const btn = document.getElementById('activateBtn')
+  btn.disabled = true
+
+  try {
+    const { ok, status, data } = await apiFetch('/api/v1/wallet/activate', { method: 'POST' })
+    if (ok) {
+      toast('구독이 활성화되었습니다')
+      loadWallet()
+    } else if (status === 402) {
+      toast(`Token이 부족합니다 (현재: ${data.balance}, 필요: ${data.required})`)
+    } else {
+      toast('오류가 발생했습니다')
+    }
+  } catch (e) {
+    toast('네트워크 오류')
+  } finally {
+    btn.disabled = false
+  }
+}
+
+async function doTransfer() {
+  const phone  = document.getElementById('transferPhone').value.trim()
+  const amount = parseInt(document.getElementById('transferAmount').value.trim(), 10)
+
+  if (!validateE164(phone))       { toast('올바른 전화번호를 입력하세요'); return }
+  if (!amount || amount < 1)      { toast('송금량을 입력하세요'); return }
+
+  if (!confirm(`${phone} 에게 ${amount} Token을 송금하시겠습니까?`)) return
+
+  try {
+    const { ok, status, data } = await apiFetch('/api/v1/wallet/transfer', {
+      method: 'POST',
+      body: JSON.stringify({ target_phone_number: phone, amount }),
+    })
+    if (ok) {
+      toast(`${amount} Token을 송금했습니다`)
+      document.getElementById('transferPhone').value  = ''
+      document.getElementById('transferAmount').value = ''
+      loadWallet()
+    } else if (status === 404) {
+      toast('받는 사람을 찾을 수 없습니다')
+    } else if (status === 402) {
+      toast(`Token이 부족합니다 (현재: ${data.balance})`)
+    } else if (status === 400 && data.error === 'cannot_transfer_to_self') {
+      toast('자신에게는 송금할 수 없습니다')
+    } else {
+      toast('송금 중 오류가 발생했습니다')
+    }
+  } catch (e) {
+    toast('네트워크 오류')
+  }
+}
+
+// ─────────────────────────────────────────────
+// Token 거래 내역 (전체)
+// ─────────────────────────────────────────────
+let _txCursor = null
+
+function renderTxItem(tx) {
+  const sign  = ['EARN','TRANSFER_IN'].includes(tx.transaction_type) ? '+' : '-'
+  const color = sign === '+' ? 'var(--green-text)' : 'var(--red-text)'
+  const label = { EARN:'신고 보상', BURN:'구독 소모', TRANSFER_OUT:'송금', TRANSFER_IN:'수신' }[tx.transaction_type] ?? tx.transaction_type
+  const sub   = tx.counterparty_phone ? `${label} · ${formatPhoneDisplay(tx.counterparty_phone)}` : label
+  const date  = new Date(tx.created_at).toLocaleDateString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+  return `<div class="list-item">
+    <div>
+      <div class="list-item-main">${sub}</div>
+      <div class="list-item-sub">${date}</div>
+    </div>
+    <div style="font-size:16px;font-weight:700;color:${color}">${sign}${tx.amount}</div>
+  </div>`
+}
+
+async function loadTxHistory(reset = false) {
+  if (reset) _txCursor = null
+
+  try {
+    const url = `/api/v1/wallet/history?limit=20${_txCursor ? `&before=${encodeURIComponent(_txCursor)}` : ''}`
+    const { ok, data } = await apiFetch(url)
+    if (!ok) return
+
+    const items = data.items ?? []
+    _txCursor = data.next_cursor ?? null
+
+    const container = document.getElementById('txHistoryList')
+
+    if (reset && items.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>거래 내역이 없습니다</p></div>'
+    } else if (reset) {
+      container.innerHTML = items.map(renderTxItem).join('')
+    } else {
+      container.insertAdjacentHTML('beforeend', items.map(renderTxItem).join(''))
+    }
+
+    document.getElementById('txHistoryMore').style.display = _txCursor ? 'block' : 'none'
+  } catch (e) { /* 무시 */ }
+}
+
+function loadMoreTxHistory() { loadTxHistory(false) }
+
+// ─────────────────────────────────────────────
+// 초대
+// ─────────────────────────────────────────────
+let _generatedInviteCode = null
+let _generatedInviteLink = null
+
+async function doGenerateInvite() {
+  const btn = document.getElementById('generateBtn')
+  btn.disabled = true
+
+  try {
+    const { ok, status, data } = await apiFetch('/api/v1/invite/generate', { method: 'POST' })
+    if (ok) {
+      _generatedInviteCode = data.code
+      _generatedInviteLink = data.share_url || `${location.origin}/?code=${data.code}`
+      document.getElementById('inviteCodeDisplay').textContent = data.code
+      document.getElementById('inviteCodeArea').style.display = 'block'
+      loadInviteStats()
+    } else if (status === 429) {
+      toast('생성 가능한 초대 링크 수를 초과했습니다')
+    } else {
+      toast('초대 코드 생성에 실패했습니다')
+    }
+  } catch (e) {
+    toast('네트워크 오류')
+  } finally {
+    btn.disabled = false
+  }
+}
+
+function copyInviteCode() {
+  if (!_generatedInviteCode) return
+  navigator.clipboard.writeText(_generatedInviteLink || _generatedInviteCode)
+    .then(() => toast('링크가 복사되었습니다'))
+    .catch(() => toast('복사 실패 — 직접 선택하여 복사하세요'))
+}
+
+function shareInviteLink() {
+  const link = _generatedInviteLink || `${location.origin}/?code=${_generatedInviteCode}`
+  if (navigator.share) {
+    navigator.share({
+      title: 'SpamGuard 초대',
+      text: '스팸 번호 차단 앱 SpamGuard에 초대합니다. 가입하면 Token을 드려요!',
+      url: link,
+    }).catch(() => {})
+  } else {
+    navigator.clipboard.writeText(link).then(() => toast('링크가 클립보드에 복사되었습니다'))
+  }
+}
+
+async function loadInviteStats() {
+  try {
+    const { ok, data } = await apiFetch('/api/v1/invite/my')
+    if (!ok) return
+
+    const earnedTokens = (data.accepted ?? 0) * 3
+    document.getElementById('inviteStats').innerHTML =
+      `총 <strong>${data.total_sent}</strong>개 발송 &nbsp;·&nbsp; <strong>${data.accepted}</strong>명 가입 &nbsp;·&nbsp; <strong style="color:var(--green-text)">+${earnedTokens} Token</strong> 획득`
+
+    const list = document.getElementById('inviteList')
+    const accepted = (data.invitations || []).filter(i => i.used_at)
+    if (accepted.length === 0) {
+      list.innerHTML = '<p style="font-size:13px;color:var(--gray-600)">아직 초대한 친구가 없습니다</p>'
+    } else {
+      list.innerHTML = accepted.map(i => {
+        const date = new Date(i.used_at).toLocaleDateString('ko-KR', { month:'short', day:'numeric' })
+        return `<div class="list-item">
+          <div>
+            <div class="list-item-main">${formatPhoneDisplay(i.invitee_phone || '—')}</div>
+            <div class="list-item-sub">가입 완료 · ${date}</div>
+          </div>
+          <div style="font-size:13px;color:var(--green-text);font-weight:600">+3 Token</div>
+        </div>`
+      }).join('')
+    }
+  } catch (e) { /* 무시 */ }
+}
+
+// ─────────────────────────────────────────────
+// 신고 이력
+// ─────────────────────────────────────────────
+async function loadHistory(reset = false) {
+  if (reset) state.histCursor = null
+
+  try {
+    const url = `/api/v1/reports/my?limit=20${state.histCursor ? `&before=${encodeURIComponent(state.histCursor)}` : ''}`
+    const { ok, data } = await apiFetch(url)
+    if (!ok) return
+
+    const items = data.items ?? []
+    state.histCursor = data.next_cursor ?? null
+
+    const container = document.getElementById('historyList')
+
+    if (reset && items.length === 0) {
+      container.innerHTML = `<div class="empty-state">
+        <div class="icon">📋</div>
+        <p>신고 이력이 없습니다</p>
+      </div>`
+      document.getElementById('historyMore').style.display = 'none'
+      return
+    }
+
+    const html = items.map(r => {
+      const tagClass = r.tag_type === 'RED' ? 'badge-red' : 'badge-yellow'
+      const tagText  = r.tag_type === 'RED' ? '위험' : '마케팅'
+      const statusClass = { PENDING:'badge-pending', VALIDATED:'badge-validated', REJECTED:'badge-rejected' }[r.status] ?? ''
+      const statusText  = { PENDING:'검토중', VALIDATED:'검증완료', REJECTED:'반려' }[r.status] ?? r.status
+      const date = new Date(r.created_at).toLocaleDateString('ko-KR', { month:'short', day:'numeric' })
+      return `<div class="list-item">
+        <div>
+          <div class="list-item-main">${r.phone_number}</div>
+          <div class="list-item-sub">${date} · ${r.description || '설명 없음'}</div>
+          <div style="margin-top:4px">
+            <span class="badge ${tagClass}">${tagText}</span>
+            <span class="badge ${statusClass}" style="margin-left:4px">${statusText}</span>
+          </div>
+        </div>
+      </div>`
+    }).join('')
+
+    if (reset) {
+      container.innerHTML = html
+    } else {
+      container.insertAdjacentHTML('beforeend', html)
+    }
+
+    document.getElementById('historyMore').style.display = state.histCursor ? 'block' : 'none'
+  } catch (e) { /* 무시 */ }
+}
+
+function loadMoreHistory() { loadHistory(false) }
+
+// ─────────────────────────────────────────────
+// 로그인/가입
+// ─────────────────────────────────────────────
+async function doLogin() {
+  const phone = document.getElementById('loginPhone').value.trim()
+  if (!validateE164(phone)) { toast('국가 코드 포함 형식으로 입력하세요 (예: +821012345678)'); return }
+
+  const btn = document.getElementById('loginBtn')
+  btn.disabled = true
+  btn.textContent = '처리 중...'
+
+  try {
+    const body = { phone_number: phone }
+    if (state.inviteCode) body.invite_code = state.inviteCode
+
+    const { ok, data } = await apiFetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+
+    if (ok) {
+      saveSession(data.token, phone)
+      if (data.is_new) {
+        toast('가입을 환영합니다! 5 Token이 지급되었습니다')
+      } else {
+        toast('로그인 되었습니다')
+      }
+      state.inviteCode = null
+      document.getElementById('inviteNoteLogin').style.display = 'none'
+
+      const dest = _afterLogin || 'lookup'
+      _afterLogin = null
+      navigate(dest)
+    } else {
+      toast('오류가 발생했습니다. 다시 시도하세요')
+    }
+  } catch (e) {
+    toast('네트워크 오류. 서버에 연결할 수 없습니다')
+  } finally {
+    btn.disabled = false
+    btn.textContent = '시작하기'
+  }
+}
+
+// ─────────────────────────────────────────────
+// 유틸
+// ─────────────────────────────────────────────
+function validateE164(num) {
+  return /^\+[1-9]\d{6,14}$/.test(num.replace(/[\s\-()]/g, ''))
+}
+
+function formatPhoneInput(input) {
+  // 입력 중 공백·대시 허용 — 제출 시 정규화는 서버에서 처리
+  // 국가코드가 없으면 +82 자동 prefix (한국 기본)
+  let v = input.value
+  if (v.length === 1 && v !== '+') {
+    input.value = '+82' + v
+  }
+}
+
+function formatPhoneDisplay(phone) {
+  if (!phone) return ''
+  if (phone.startsWith('+82')) {
+    const local = phone.slice(3)
+    if (local.length === 10) return `010-${local.slice(1,5)}-${local.slice(5)}`
+  }
+  return phone
+}
+
+let _toastTimer = null
+function toast(msg) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('show')
+  clearTimeout(_toastTimer)
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2800)
+}
+
+// ─────────────────────────────────────────────
+// 초기화
+// ─────────────────────────────────────────────
+initRoute()
+</script>
+</body>
+</html>
