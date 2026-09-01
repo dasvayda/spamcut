@@ -2,3 +2,25 @@ node_modules/
 .env
 dist/
 *.local
+
+# Android 빌드 산출물
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/.idea/
+android/captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Firebase — 콘솔에서 각자 발급받아 배치 (커밋 금지)
+android/app/google-services.json
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
