@@ -8,7 +8,9 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
 
-// 매일 자정 실행 — 24시간 지난 스팸 캐시 정리로 DB 크기 관리
+// 매일 실행 — 오래된 로컬 데이터 정리
+//  - 스팸 판정 캐시: 24시간
+//  - 최근 수신 내역: 30일 (기기에 개인 데이터를 무한정 쌓아두지 않는다)
 @HiltWorker
 class CacheEvictionWorker @AssistedInject constructor(
     @Assisted context: Context,
@@ -16,13 +18,19 @@ class CacheEvictionWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
-        AppDatabase.getInstance(applicationContext).spamDao().evictStale(cutoff)
+        val now = System.currentTimeMillis()
+        val db = AppDatabase.getInstance(applicationContext)
+
+        db.spamDao().evictStale(now - 24 * 60 * 60 * 1000L)
+        db.recentContactDao().evictOlderThan(now - RECENT_RETENTION_DAYS * 24 * 60 * 60 * 1000L)
+
         return Result.success()
     }
 
     companion object {
         const val WORK_NAME = "cache_eviction"
+
+        private const val RECENT_RETENTION_DAYS = 30L
 
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<CacheEvictionWorker>(1, TimeUnit.DAYS)

@@ -8,6 +8,20 @@ data class SpamCheckResponse(
     val score: Int? = null,
 )
 
+// 최근 수신 내역 "최신 정보 받기" — 여러 번호를 한 번에 조회
+data class BatchCheckRequest(val numbers: List<String>)
+
+data class BatchCheckItem(
+    val number: String,
+    val isSpam: Boolean,
+    val tagType: String? = null,
+    val score: Int? = null,
+    val whitelisted: Boolean? = null,
+    val company: String? = null,
+)
+
+data class BatchCheckResponse(val results: List<BatchCheckItem>)
+
 data class ReportRequest(
     val phone_number: String,
     val tag_type: String,
@@ -53,6 +67,9 @@ interface SpamApiService {
 
     @GET("api/v1/check-spam")
     suspend fun checkSpam(@Query("number") number: String): SpamCheckResponse
+
+    @POST("api/v1/check-spam/batch")
+    suspend fun checkSpamBatch(@Body body: BatchCheckRequest): BatchCheckResponse
 
     @POST("api/v1/auth/register")
     suspend fun register(@Body body: AuthRequest): AuthResponse

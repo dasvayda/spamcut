@@ -1,5 +1,6 @@
 package com.spamguard.app.data.db.entities
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -7,9 +8,18 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "pending_reports")
 data class PendingReport(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
+
+    @ColumnInfo(name = "phone_number")
     val phoneNumber: String,
+
+    @ColumnInfo(name = "tag_type")
     val tagType: String,
+
     val description: String?,
+
+    @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(name = "retry_count")
     val retryCount: Int = 0,
 )

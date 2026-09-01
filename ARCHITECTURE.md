@@ -102,21 +102,37 @@
 ### 3.1 핵심 흐름
 
 ```
-SMS 수신
-  → SmsReceiver (BroadcastReceiver, priority 999)
-      → [A] UserSubscription 유효성 확인 (Room DB)
+SMS / 전화 수신
+  → SmsReceiver · PhoneStateReceiver
+      → [0] recent_contacts 에 발신 번호 기록 (구독 여부 무관 — 항상 로컬 저장)
+      → [A] UserSubscription 유효성 확인 (Room DB) — 미구독이면 여기서 종료
       → [B] 로컬 Room DB에서 전화번호 조회
-      → [C] 없으면 백엔드 API 조회 (5초 타임아웃)
+      → [C] 없으면 백엔드 API 조회 (SMS 5초 / 전화 3초 타임아웃)
       → 스팸이면 OverlayService 실행 + 알림 표시
 ```
+
+### 3.1.1 최근 수신 내역 → 서버 동기화
+
+```
+recent_contacts (로컬 전용, 30일 보관)
+  → RecentActivity 목록에서 항목 선택
+      → [신고하기]      내 기기 → 서버   POST /api/v1/report
+      → [공유하기]      내 기기 → 친구   ACTION_SEND (외부 앱)
+      → [최신 정보 받기] 서버 → 내 기기  POST /api/v1/check-spam/batch
+```
+
+> 수신 번호는 **신고 버튼을 눌러야만** 서버로 올라간다. 그 전까지는 기기 안에만 존재한다.
 
 ### 3.2 주요 컴포넌트
 
 | 컴포넌트 | 역할 |
 |---------|------|
-| `SmsReceiver` | SMS 인터셉트, 스팸 판별, 오버레이 트리거 |
+| `SmsReceiver` | SMS 인터셉트, 최근 수신 내역 기록, 스팸 판별, 오버레이 트리거 |
+| `PhoneStateReceiver` | 수신 전화 기록 + 시각적 경고 |
+| `RecentActivity` | 최근 수신 내역 목록 + 신고·공유·최신 정보 받기 |
+| `PhoneNumbers` | 수신 번호 E.164 정규화 (저장·조회 키 통일) |
 | `OverlayService` | `TYPE_APPLICATION_OVERLAY` 경고창 표시 |
-| `AppDatabase` (Room) | `spam_numbers`, `user_subscription` 로컬 캐시 |
+| `AppDatabase` (Room) | `spam_numbers`, `user_subscription`, `pending_reports`, `recent_contacts` 로컬 저장 |
 | `SessionManager` | JWT 암호화 저장 (EncryptedSharedPreferences) |
 | `RetrofitClient` | 백엔드 API 통신 |
 | `OnboardingActivity` | 전화번호 가입 + 초대 딥링크 처리 |
@@ -136,6 +152,7 @@ SMS 수신
 | POST | `/api/v1/auth/register` | — | 전화번호 가입·로그인 (JWT 반환) |
 | GET | `/api/v1/auth/me` | JWT | 내 정보 + Token 잔액 |
 | GET | `/api/v1/check-spam?number=` | — | 번호 스팸 조회 (Offline-first 폴백) |
+| POST | `/api/v1/check-spam/batch` | — | 번호 여러 개 일괄 조회 (최대 100) — 앱 "최신 정보 받기" |
 | POST | `/api/v1/report` | JWT | 스팸 신고 제출 |
 | GET | `/api/v1/reports/my` | JWT | 내 신고 이력 (cursor 페이지네이션) |
 | GET | `/api/v1/wallet` | JWT | 잔액·구독 상태·거래 이력 |

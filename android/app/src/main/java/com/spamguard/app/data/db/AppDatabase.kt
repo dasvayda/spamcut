@@ -5,19 +5,27 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.spamguard.app.data.db.dao.PendingReportDao
+import com.spamguard.app.data.db.dao.RecentContactDao
 import com.spamguard.app.data.db.dao.SpamDao
 import com.spamguard.app.data.db.entities.PendingReport
+import com.spamguard.app.data.db.entities.RecentContact
 import com.spamguard.app.data.db.entities.SpamNumber
 import com.spamguard.app.data.db.entities.UserSubscription
 
 @Database(
-    entities = [SpamNumber::class, UserSubscription::class, PendingReport::class],
-    version = 2,
+    entities = [
+        SpamNumber::class,
+        UserSubscription::class,
+        PendingReport::class,
+        RecentContact::class,
+    ],
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun spamDao(): SpamDao
     abstract fun pendingReportDao(): PendingReportDao
+    abstract fun recentContactDao(): RecentContactDao
 
     companion object {
         @Volatile

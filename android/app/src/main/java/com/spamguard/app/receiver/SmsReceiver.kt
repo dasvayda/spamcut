@@ -10,9 +10,11 @@ import android.provider.Telephony
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.spamguard.app.R
+import com.spamguard.app.data.PhoneNumbers
 import com.spamguard.app.data.SessionManager
 import com.spamguard.app.data.api.RetrofitClient
 import com.spamguard.app.data.db.AppDatabase
+import com.spamguard.app.data.db.dao.RecentContactDao
 import com.spamguard.app.data.db.entities.SpamNumber
 import com.spamguard.app.service.OverlayService
 import com.spamguard.app.ui.ReportActivity
@@ -33,15 +35,39 @@ class SmsReceiver : BroadcastReceiver() {
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         if (messages.isNullOrEmpty()) return
 
-        val senderNumber = messages.first().originatingAddress ?: return
+        val rawSender = messages.first().originatingAddress ?: return
+        val senderNumber = PhoneNumbers.toE164(rawSender) ?: rawSender
+
+        // 본문은 멀티파트 SMS가 나뉘어 오므로 이어붙인다
+        val body = messages.mapNotNull { it.messageBody }.joinToString(separator = "")
 
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                recordRecent(context, senderNumber, body)
                 checkAndAlert(context, senderNumber)
+            } catch (e: Exception) {
+                // SMS 수신 콜백에서는 어떤 예외도 앱을 크래시시키지 않는다
+                Log.w("SmsReceiver", "SMS 처리 실패 (silent): ${e.message}")
             } finally {
                 pendingResult.finish()
             }
+        }
+    }
+
+    // 최근 수신 내역에 남긴다 — 구독 여부와 무관하게 항상 기록한다.
+    // WHY: 미구독자도 나중에 목록에서 골라 신고할 수 있어야 한다.
+    //      경고(오버레이·알림)만 구독자 전용이고, 로컬 기록은 모두에게 열려 있다.
+    private suspend fun recordRecent(context: Context, phoneNumber: String, body: String) {
+        try {
+            AppDatabase.getInstance(context).recentContactDao().record(
+                phoneNumber = phoneNumber,
+                eventType = RecentContactDao.EVENT_SMS,
+                messagePreview = body.take(RecentContactDao.PREVIEW_MAX_LENGTH).ifBlank { null },
+            )
+        } catch (e: Exception) {
+            // SMS 수신 콜백에서는 어떤 경우에도 앱을 죽이지 않는다
+            Log.w("SmsReceiver", "최근 수신 내역 기록 실패 (silent): ${e.message}")
         }
     }
 
@@ -56,6 +82,8 @@ class SmsReceiver : BroadcastReceiver() {
         // Step B: 로컬 캐시 조회
         val cached = dao.findByPhoneNumber(phoneNumber)
         if (cached != null) {
+            db.recentContactDao()
+                .markChecked(phoneNumber, cached.tagType, System.currentTimeMillis())
             launchOverlay(context, cached.tagType, phoneNumber)
             showDetectionNotification(context, phoneNumber, cached.tagType)
             return
@@ -64,6 +92,11 @@ class SmsReceiver : BroadcastReceiver() {
         // Step C: API 조회 (타임아웃은 OkHttp에서 5초 설정)
         try {
             val response = RetrofitClient.service.checkSpam(phoneNumber)
+
+            // 스팸이 아니어도 확인 사실은 최근 수신 내역에 남긴다 (목록에서 "안전"으로 표시)
+            db.recentContactDao()
+                .markChecked(phoneNumber, response.tagType, System.currentTimeMillis())
+
             if (response.isSpam && response.tagType != null) {
                 dao.insertOrReplace(
                     SpamNumber(
@@ -98,7 +131,7 @@ class SmsReceiver : BroadcastReceiver() {
         // "신고하기" 액션 — ReportActivity로 전화번호 전달
         val reportIntent = Intent(context, ReportActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("prefill_number", phoneNumber)
+            putExtra(ReportActivity.EXTRA_PREFILL_NUMBER, phoneNumber)
         }
         val reportPending = PendingIntent.getActivity(
             context,

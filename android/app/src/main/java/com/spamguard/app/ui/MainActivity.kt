@@ -1,13 +1,18 @@
 package com.spamguard.app.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.spamguard.app.R
 import com.spamguard.app.data.SessionManager
@@ -24,6 +29,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var session: SessionManager
 
+    // 결과는 별도로 처리하지 않는다 — 거부해도 앱은 동작하고, 수신 감지만 비활성 상태가 된다
+    private val permissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -36,6 +45,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        findViewById<Button>(R.id.btnRecent).setOnClickListener {
+            startActivity(Intent(this, RecentActivity::class.java))
+        }
         findViewById<Button>(R.id.btnReport).setOnClickListener {
             startActivity(Intent(this, ReportActivity::class.java))
         }
@@ -52,7 +64,28 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        requestReceiverPermissions()
+
         lifecycleScope.launch { syncWallet() }
+    }
+
+    // SMS·전화 수신 감지에 필요한 런타임 권한 요청.
+    // WHY: 이 권한이 없으면 BroadcastReceiver가 호출되지 않아 최근 수신 내역이 비어 있게 된다.
+    private fun requestReceiverPermissions() {
+        val needed = mutableListOf(
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_PHONE_STATE,
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            needed.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        val missing = needed.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) {
+            permissionLauncher.launch(missing.toTypedArray())
+        }
     }
 
     override fun onResume() {

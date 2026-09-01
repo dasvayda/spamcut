@@ -10,8 +10,10 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.spamguard.app.R
+import com.spamguard.app.data.PhoneNumbers
 import com.spamguard.app.data.api.RetrofitClient
 import com.spamguard.app.data.db.AppDatabase
+import com.spamguard.app.data.db.dao.RecentContactDao
 import com.spamguard.app.data.db.entities.SpamNumber
 import com.spamguard.app.service.OverlayService
 import com.spamguard.app.ui.ReportActivity
@@ -44,16 +46,18 @@ class PhoneStateReceiver : BroadcastReceiver() {
         if (intent.action != TelephonyManager.ACTION_PHONE_STATE_CHANGED) return
 
         val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE) ?: return
-        val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
+        val rawNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
 
         when (state) {
             TelephonyManager.EXTRA_STATE_RINGING -> {
-                if (number.isNullOrBlank()) return
+                if (rawNumber.isNullOrBlank()) return
+                val number = PhoneNumbers.toE164(rawNumber) ?: rawNumber
                 lastAlertedNumber = number
 
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        recordRecent(context, number)
                         checkAndAlert(context, number)
                     } catch (e: Exception) {
                         Log.w(TAG, "전화 스팸 확인 실패 (silent): ${e.message}")
@@ -73,6 +77,19 @@ class PhoneStateReceiver : BroadcastReceiver() {
         }
     }
 
+    // 최근 수신 내역에 남긴다 — 구독 여부와 무관하게 항상 기록한다.
+    // WHY: 미구독자도 방금 걸려온 번호를 목록에서 골라 신고할 수 있어야 한다.
+    private suspend fun recordRecent(context: Context, phoneNumber: String) {
+        try {
+            AppDatabase.getInstance(context).recentContactDao().record(
+                phoneNumber = phoneNumber,
+                eventType = RecentContactDao.EVENT_CALL,
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "최근 수신 내역 기록 실패 (silent): ${e.message}")
+        }
+    }
+
     private suspend fun checkAndAlert(context: Context, phoneNumber: String) {
         val db = AppDatabase.getInstance(context)
         val dao = db.spamDao()
@@ -84,6 +101,8 @@ class PhoneStateReceiver : BroadcastReceiver() {
         // 로컬 캐시 먼저 (즉시 응답)
         val cached = dao.findByPhoneNumber(phoneNumber)
         if (cached != null) {
+            db.recentContactDao()
+                .markChecked(phoneNumber, cached.tagType, System.currentTimeMillis())
             triggerAlert(context, phoneNumber, cached.tagType)
             return
         }
@@ -92,6 +111,11 @@ class PhoneStateReceiver : BroadcastReceiver() {
         try {
             withTimeout(3000) {
                 val result = RetrofitClient.service.checkSpam(phoneNumber)
+
+                // 스팸이 아니어도 확인 사실은 최근 수신 내역에 남긴다
+                db.recentContactDao()
+                    .markChecked(phoneNumber, result.tagType, System.currentTimeMillis())
+
                 if (result.isSpam && result.tagType != null) {
                     dao.insertOrReplace(
                         SpamNumber(
@@ -130,7 +154,7 @@ class PhoneStateReceiver : BroadcastReceiver() {
 
         val reportIntent = Intent(context, ReportActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("prefill_number", phoneNumber)
+            putExtra(ReportActivity.EXTRA_PREFILL_NUMBER, phoneNumber)
         }
         val reportPending = PendingIntent.getActivity(
             context,

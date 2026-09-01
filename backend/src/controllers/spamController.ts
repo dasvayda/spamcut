@@ -14,6 +14,10 @@ import {
 
 const SPAM_CACHE_TTL = 86400 // 24h
 
+export type SpamCheckResult =
+  | { isSpam: false; whitelisted?: true; company?: string }
+  | { isSpam: true; tagType: TagType; score: number }
+
 export async function checkSpam(phoneNumber: string) {
   // 화이트리스트 확인 — 인증된 기업 번호는 항상 안전
   const { rows: wlRows } = await pool.query(
@@ -47,6 +51,69 @@ export async function checkSpam(phoneNumber: string) {
   await redisSet(cacheKey, JSON.stringify(result), SPAM_CACHE_TTL)
 
   return result
+}
+
+// 여러 번호를 한 번에 조회 — 앱의 "최신 정보 받기"(최근 수신 내역 일괄 갱신)에서 사용
+//
+// 단건 checkSpam()을 N번 호출하면 왕복 지연과 rate limit 소모가 커진다.
+// 캐시 히트는 Redis에서 바로 채우고, 미스분만 화이트리스트/spam_master를 각각 1회 질의한다.
+export async function checkSpamBatch(
+  phoneNumbers: string[],
+): Promise<Array<{ number: string } & SpamCheckResult>> {
+  const unique = Array.from(new Set(phoneNumbers))
+  const resolved = new Map<string, SpamCheckResult>()
+  const misses: string[] = []
+
+  for (const number of unique) {
+    const cached = await redisGet(`spam:${number}`)
+    if (cached) resolved.set(number, JSON.parse(cached) as SpamCheckResult)
+    else misses.push(number)
+  }
+
+  if (misses.length > 0) {
+    const { rows: wlRows } = await pool.query(
+      `SELECT phone_number, company_name FROM whitelist WHERE phone_number = ANY($1::text[])`,
+      [misses],
+    )
+    const whitelist = new Map<string, string>()
+    for (const row of wlRows as Array<{ phone_number: string; company_name: string }>) {
+      whitelist.set(row.phone_number, row.company_name)
+    }
+
+    const { rows } = await pool.query(
+      `SELECT phone_number, tag_type, aggregate_score
+       FROM spam_master
+       WHERE phone_number = ANY($1::text[]) AND global_status = 'ACTIVE'`,
+      [misses],
+    )
+    const spamRows = new Map<string, { tag_type: TagType; aggregate_score: number }>()
+    for (const row of rows as Array<{
+      phone_number: string
+      tag_type: TagType
+      aggregate_score: number
+    }>) {
+      spamRows.set(row.phone_number, row)
+    }
+
+    for (const number of misses) {
+      const company = whitelist.get(number)
+      if (company) {
+        // 화이트리스트는 단건 조회와 동일하게 캐시하지 않는다 (해제 시 즉시 반영되어야 함)
+        resolved.set(number, { isSpam: false, whitelisted: true, company })
+        continue
+      }
+
+      const row = spamRows.get(number)
+      const result: SpamCheckResult = row
+        ? { isSpam: true, tagType: row.tag_type, score: row.aggregate_score }
+        : { isSpam: false }
+
+      await redisSet(`spam:${number}`, JSON.stringify(result), SPAM_CACHE_TTL)
+      resolved.set(number, result)
+    }
+  }
+
+  return unique.map((number) => ({ number, ...(resolved.get(number) as SpamCheckResult) }))
 }
 
 export async function submitReport(

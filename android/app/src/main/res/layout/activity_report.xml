@@ -12,23 +12,30 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Report Spam Number"
+            android:text="스팸 번호 신고"
             android:textSize="20sp"
             android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="제출하면 이 번호가 서버 DB에 등록되고, 다른 사용자에게도 경고가 표시됩니다."
+            android:textSize="13sp"
             android:layout_marginBottom="16dp"/>
 
         <EditText
             android:id="@+id/etReportPhone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Phone number (E.164)"
+            android:hint="전화번호 (예: 010-1234-5678)"
             android:inputType="phone"
             android:layout_marginBottom="16dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tag Type"
+            android:text="신고 유형"
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
 
@@ -41,14 +48,14 @@
                 android:id="@+id/rbRed"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🔴 RED — Malicious Spam / Phishing"
+                android:text="위험 스팸 — 피싱·불법 도박·성인"
                 android:textColor="#D32F2F"/>
 
             <RadioButton
                 android:id="@+id/rbYellow"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🟡 YELLOW — Commercial Marketing"/>
+                android:text="마케팅 문자 — 광고·홍보"/>
 
         </RadioGroup>
 
@@ -57,7 +64,7 @@
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:gravity="top"
-            android:hint="Optional description…"
+            android:hint="받은 문자 내용 (선택) — 검증 정확도가 올라갑니다"
             android:inputType="textMultiLine"
             android:layout_marginBottom="24dp"/>
 
@@ -65,7 +72,7 @@
             android:id="@+id/btnSubmitReport"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Submit Report"/>
+            android:text="@string/action_report"/>
 
     </LinearLayout>
 </ScrollView>

@@ -6,6 +6,7 @@ import com.spamguard.app.data.api.RetrofitClient
 import com.spamguard.app.data.api.SpamApiService
 import com.spamguard.app.data.db.AppDatabase
 import com.spamguard.app.data.db.dao.PendingReportDao
+import com.spamguard.app.data.db.dao.RecentContactDao
 import com.spamguard.app.data.db.dao.SpamDao
 import dagger.Module
 import dagger.Provides
@@ -28,6 +29,9 @@ object AppModule {
 
     @Provides
     fun providePendingReportDao(db: AppDatabase): PendingReportDao = db.pendingReportDao()
+
+    @Provides
+    fun provideRecentContactDao(db: AppDatabase): RecentContactDao = db.recentContactDao()
 
     @Provides
     @Singleton

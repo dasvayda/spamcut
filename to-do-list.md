@@ -78,6 +78,16 @@
 - [x] **규칙 기반 AI 검증** — `spamValidator.ts`: 한국어 스팸 키워드 패턴 매칭으로 명백한 스팸 가중치 boosting (최소 weight 3) + 설명 기반 자동 분류
 - [x] **Reputation 서서히 회복** — 서버 시작 시 1시간 인터벌 스케줄러: 최근 7일 거절 이력 없는 계정 +1/h (최대 100)
 
+### 접근성 — 최근 수신 내역 기반 신고 (앱 내 완결)
+- [x] **수신 번호 로컬 자동 저장** — `recent_contacts` Room 테이블 + `SmsReceiver`/`PhoneStateReceiver`가 구독 여부와 무관하게 발신 번호·문자 미리보기 기록 (30일 보관, `CacheEvictionWorker` 정리)
+- [x] **최근 수신 내역 화면** — `RecentActivity`: 번호별 상태(위험/마케팅/안전/확인 필요/신고함) + 수신 요약 목록
+- [x] **3개 액션 메뉴** — 데이터 방향이 드러나는 네이밍
+  - **신고하기** (내 기기 → 서버) — 번호·문자 내용 자동 입력된 신고 화면, 오프라인이면 큐에 저장 후 자동 재전송
+  - **공유하기** (내 기기 → 친구) — 시스템 공유 시트, 판정 결과 + 서비스 링크
+  - **최신 정보 받기** (서버 → 내 기기) — 목록 전체 판정 일괄 갱신
+- [x] **배치 조회 API** — `POST /api/v1/check-spam/batch` (최대 100건, Redis 캐시 우선)
+- [x] **E.164 정규화 유틸** — `PhoneNumbers.kt`: 통신사가 주는 제각각인 번호 형식을 저장 시점에 통일
+
 ### 배포 준비 (Android)
 - [x] **FCM 푸시 알림** — 백엔드: `fcmService.ts` (firebase-admin, FIREBASE_SERVICE_ACCOUNT 환경변수) + 신고 검증 완료 시 자동 발송 + 구독 만료 D-3 스케줄러
   - Android: `SpamGuardFirebaseService.kt` (FCM 수신·채널 생성·토큰 갱신 서버 업로드)

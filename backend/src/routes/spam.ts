@@ -1,7 +1,12 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { requireAuth } from '../middleware/auth'
-import { checkSpam, submitReport, penalizeReporter } from '../controllers/spamController'
+import {
+  checkSpam,
+  checkSpamBatch,
+  submitReport,
+  penalizeReporter,
+} from '../controllers/spamController'
 import { JwtPayload, TagType } from '../types'
 
 const e164 = z.string().regex(/^\+[1-9]\d{6,14}$/, 'Must be E.164 format')
@@ -16,6 +21,21 @@ export async function spamRoutes(fastify: FastifyInstance) {
     }
     const result = await checkSpam(parse.data)
     return reply.send(result)
+  })
+
+  // POST /api/v1/check-spam/batch  { numbers: ["+8210...", ...] }
+  // 앱 "최신 정보 받기" 전용 — 최근 수신 내역의 스팸 판정을 한 번의 요청으로 갱신한다.
+  // check-spam과 동일하게 공개 엔드포인트 (로그인 없이도 조회 가능)
+  fastify.post('/check-spam/batch', async (request, reply) => {
+    const schema = z.object({ numbers: z.array(e164).min(1).max(100) })
+
+    const parse = schema.safeParse(request.body)
+    if (!parse.success) {
+      return reply.status(400).send({ error: 'invalid_numbers' })
+    }
+
+    const results = await checkSpamBatch(parse.data.numbers)
+    return reply.send({ results })
   })
 
   // POST /api/v1/report

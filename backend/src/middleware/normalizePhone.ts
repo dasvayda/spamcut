@@ -3,6 +3,9 @@
 
 const PHONE_FIELDS = ['phone_number', 'target_phone_number', 'number']
 
+// 배열로 오는 번호 필드 — /check-spam/batch 의 { numbers: [...] }
+const PHONE_ARRAY_FIELDS = ['numbers']
+
 function normalize(value: unknown): unknown {
   if (typeof value !== 'string') return value
   return value.replace(/[\s\-()]/g, '')
@@ -11,6 +14,10 @@ function normalize(value: unknown): unknown {
 export function normalizePhoneFields(obj: Record<string, unknown>) {
   for (const field of PHONE_FIELDS) {
     if (field in obj) obj[field] = normalize(obj[field])
+  }
+  for (const field of PHONE_ARRAY_FIELDS) {
+    const value = obj[field]
+    if (Array.isArray(value)) obj[field] = value.map(normalize)
   }
 }
 
