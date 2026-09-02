@@ -1,4 +1,4 @@
-# SpamGuard — Post-Prototype To-Do List
+# SpamCut — Post-Prototype To-Do List
 
 ## 서비스 핵심 철학
 
@@ -14,7 +14,8 @@
 | 1 | **Prototype** | 백엔드 API + Android SMS 감지 + 오버레이 + 지갑 UI | ✅ 완료 |
 | 2 | **Alpha** | 초대 시스템 + 어뷰징 방어 + Android 내부 테스트 가능 | ✅ 완료 |
 | 2.5 | **Web Client** | Vanilla JS SPA — 앱 없이 웹에서 완결된 서비스 (조회·신고·지갑·초대) | ✅ 완료 |
-| 3 | **Beta** | AI 검증 + FCM 푸시 + Play Store 출시 (Android) | 🔜 다음 |
+| 3 | **Beta** | AI 검증 + FCM 푸시 + 최근 수신 내역 기반 신고 | ✅ 완료 |
+| 3.5 | **Launch Readiness** | Play 정책 충족 + 오탐 구제 + 앱 내 기능 공백 메우기 | 🔜 다음 |
 | 4 | **Production** | iOS + SEO 웹(Next.js) + B2B API + 글로벌 인프라 | — |
 | 5 | **Blockchain** | 사용자 기반 충분 시 — 온체인 토큰 전환 + DEX 스왑 | — |
 
@@ -30,7 +31,7 @@
 - [x] **신규 가입 5 token 선지급** — `auth.ts`에서 `is_new` 판별 후 자동 EARN 기록
 - [x] **초대 코드 시스템** — `invitations` 테이블 + `POST /api/v1/invite/generate` + `GET /api/v1/invite/my`
   - 초대 코드로 가입 시 피초대자 +5 token (기존 가입 지급), 초대자 +3 token 보너스
-  - 딥링크: `spamguard://invite?code=XXXX`
+  - 딥링크: `spamcut://invite?code=XXXX`
 - [x] **Admin 엔드포인트** — `users.is_admin` 컬럼 + `/api/v1/admin/*` 라우트
   - 신고 거절, 번호 비활성화, 관리자 권한 부여, 신고 목록, 서비스 통계
 - [x] **E.164 정규화 미들웨어** — 공백/대시 자동 제거, 모든 라우트에 전역 적용
@@ -90,10 +91,10 @@
 
 ### 배포 준비 (Android)
 - [x] **FCM 푸시 알림** — 백엔드: `fcmService.ts` (firebase-admin, FIREBASE_SERVICE_ACCOUNT 환경변수) + 신고 검증 완료 시 자동 발송 + 구독 만료 D-3 스케줄러
-  - Android: `SpamGuardFirebaseService.kt` (FCM 수신·채널 생성·토큰 갱신 서버 업로드)
+  - Android: `SpamCutFirebaseService.kt` (FCM 수신·채널 생성·토큰 갱신 서버 업로드)
   - **사용자 작업 필요:** Firebase 콘솔에서 프로젝트 생성 + `google-services.json` → `android/app/` 배치 + `FIREBASE_SERVICE_ACCOUNT` Railway 환경변수 설정
 - [x] **캐시 만료 정리** — `CacheEvictionWorker.kt`: WorkManager PeriodicWork (1일, 배터리 절약 제약)
-- [x] **Hilt DI 완성** — `@HiltAndroidApp` (SpamGuardApp) + `AppModule.kt` (DB·DAO·API·SessionManager 주입) + HiltWorkerFactory WorkManager 통합
+- [x] **Hilt DI 완성** — `@HiltAndroidApp` (SpamCutApp) + `AppModule.kt` (DB·DAO·API·SessionManager 주입) + HiltWorkerFactory WorkManager 통합
 - [x] **오프라인 대응** — `PendingReport` Room 엔티티 + `PendingReportDao` + `PendingReportWorker.kt` (네트워크 복귀 시 자동 재전송, 3회 실패 시 폐기)
 - [x] **CallScreeningService** — `CallScreeningService.kt`: `ROLE_CALL_SCREENING` 수신 전화 RED 스팸 자동 거절 (2초 타임아웃, 실패 시 통화 허용)
 - [x] **ProGuard/R8 규칙** — `proguard-rules.pro`: Retrofit·Gson·Room·Hilt·Firebase·WorkManager·EncryptedSharedPreferences 보호
@@ -105,6 +106,62 @@
 - [x] **Redis 도입** — `redisClient.ts`: `ioredis` + `spam:{e164}` 키 24h TTL + graceful degradation (Redis 없으면 PG 직접 조회)
 - [x] **Docker Compose** — `docker-compose.yml`: postgres 15 + redis 7 + backend (healthcheck 포함)
 - [ ] **Message Queue (BullMQ)** — 실제 부하 발생 시 도입 (Redis 인프라 준비 완료)
+
+---
+
+## Stage 3.5 — Launch Readiness (사용자 관점 점검)
+
+> 기능은 갖춰졌으나 **사용자가 실제로 쓸 때 막히는 지점**들. 코드 확인 결과 아래 항목은 현재 구현되어 있지 않다.
+> A는 출시 자체를 막는 요소이므로 우선순위가 가장 높다.
+
+### A. 출시 차단 요소 (Google Play 정책)
+
+- [ ] **앱 내 계정 삭제 경로** — `DELETE /api/v1/users/me`는 구현됐지만 **앱에서 호출하는 화면이 없다**
+  (`SpamApiService.deleteAccount()` 정의만 존재, 호출부 0건). Play는 계정 생성 앱에 앱 내 삭제 경로를 **필수**로 요구
+- [ ] **로그아웃 UI** — `SessionManager.clearSession()`을 호출하는 화면이 없어 계정 전환·기기 양도가 불가능
+- [ ] **`READ_SMS` 권한 제거 검토** — 매니페스트에 선언돼 있으나 **실사용처가 없다**
+  (SMS 본문은 `RECEIVE_SMS` 브로드캐스트로 받으므로 충분). Play의 SMS 민감 권한 정책은 *선언만으로도* 별도 심사·서식을 요구하므로,
+  제거하면 심사 리스크가 사라진다 *(매니페스트 변경 — 실행 전 Confirm)*
+- [ ] **개인정보처리방침 URL + 앱 내 링크** — 수집 항목 명시 필요: 전화번호(서버), 수신 발신번호·문자 미리보기(기기 로컬 30일), FCM 토큰
+- [ ] **데이터 세이프티 서식 작성** — 위 수집 항목 기준. "신고 버튼을 눌러야만 서버 전송" 구조를 명확히 기술
+- [ ] **권한 사전 고지 화면** — 지금은 시스템 다이얼로그가 설명 없이 바로 뜬다. 왜 필요한지 먼저 보여주는 화면이 승낙률과 심사 모두에 유리
+
+### B. 신뢰 — 오탐 구제 (현재 사용자가 할 수 있는 게 없다)
+
+- [ ] **오탐 이의제기** — "이 번호는 스팸이 아니에요". 지인·회사·병원 번호가 RED로 잡히면 사용자에게 **아무 대응 수단이 없다**.
+  현재 신고 철회·점수 차감 경로는 admin 전용 `reject`뿐 *(API 추가 — Confirm 대상)*
+- [ ] **내 허용목록(개인 화이트리스트)** — 택배·회사 등 자주 오는 번호는 경고 제외. 로컬 우선 적용
+- [ ] **신고 취소** — 잘못 누른 신고를 일정 시간 내 철회 (지금은 제출 즉시 되돌릴 수 없음)
+- [ ] **차단 이력 화면** — `CallScreeningService`가 자동 거절한 전화 목록.
+  현재는 무엇이 차단됐는지 볼 방법이 없어 "전화가 안 온다"는 불신으로 이어짐. 자동 차단 기능의 신뢰는 이 화면에서 나온다
+
+### C. 앱 내 기능 공백 (웹에는 있는데 앱엔 없음)
+
+- [ ] **번호 직접 조회 화면** — 앱에서 `checkSpam()`은 리시버만 호출한다. 모르는 번호를 사용자가 직접 확인할 방법이 앱 안에 없음
+- [ ] **내 신고 이력 화면** — `GET /api/v1/reports/my`가 **Android API 인터페이스에 아예 정의되어 있지 않다**.
+  신고 후 검증 여부를 앱에서 확인할 수 없음 (FCM 푸시만으로는 놓치면 끝)
+- [ ] **초대 화면** — 초대 코드 생성·공유가 웹에만 있다. P2P 초대가 핵심 성장 장치인데 앱에 진입점이 없음
+- [ ] **Token 거래 내역 화면** — 웹 `#tx-history`에 대응하는 앱 화면 없음
+
+### D. 온보딩 · 설정
+
+- [ ] **권한 거부 상태 복구** — 현재 `permissionLauncher` 결과를 무시한다. 거부하면 앱이 **조용히 무력화**되고 사용자는 이유를 모른다.
+  메인 화면 상태 배너 + 설정 이동 버튼 필요
+- [ ] **CallScreening 기본 앱 설정 유도** — `RoleManager.createRequestRoleIntent(ROLE_CALL_SCREENING)` 호출부가 없다.
+  사용자가 설정에서 직접 찾아 선택해야 해서 사실상 아무도 활성화하지 않는 상태
+- [ ] **배터리 최적화 예외 안내** — 제조사 최적화로 백그라운드 수신이 끊기는 문제 (국내 기기에서 특히 빈번)
+- [ ] **최근 수신 내역 프라이버시 제어** — 문자 미리보기 저장 끄기 / 전체 삭제 / 보관 기간 선택(7·30·90일).
+  현재는 항목별 삭제만 가능하고 저장 자체를 끌 수 없다
+- [ ] **알림 채널별 토글** — 스팸 감지·전화 경고·검증 완료·구독 만료를 각각 끌 수 있게
+- [ ] **구독 만료 안내** — 만료되면 경고가 조용히 꺼진다. 만료 임박·만료 상태를 메인 화면에 상시 표시
+
+### E. 표시 · 국제화
+
+- [ ] **번호 표시 포맷** — `PhoneNumbers.toDisplay()`가 `01012345678`을 그대로 출력. 하이픈 삽입 필요
+- [ ] **국가 코드 하드코딩 해제** — `PhoneNumbers.DEFAULT_COUNTRY_CODE = "82"` 고정.
+  `TelephonyManager.simCountryIso` 기반으로 전환 (Stage 4 글로벌 확장 전제 조건)
+- [ ] **연락처 이름 표시** — 저장된 번호는 이름으로 보여주고 경고에서 제외 *(`READ_CONTACTS` 권한 추가 — Confirm 대상)*
+- [ ] **다크 모드 검증** — 테마는 `DayNight`인데 오버레이 하드코딩 색상과의 대비 확인 필요
 
 ---
 
@@ -161,7 +218,7 @@
 ### 주요 Android 제약
 - `PhoneStateReceiver` + `EXTRA_INCOMING_NUMBER`: Android 9 이전에는 누구나 읽을 수 있었으나,
   Android 9부터 `READ_CALL_LOG` 또는 `READ_PHONE_STATE` 권한 필요 (이미 보유)
-- `CallScreeningService`: 사용자가 설정에서 직접 SpamGuard를 선택해야 활성화됨
+- `CallScreeningService`: 사용자가 설정에서 직접 SpamCut를 선택해야 활성화됨
 - 오버레이(`TYPE_APPLICATION_OVERLAY`): `SYSTEM_ALERT_WINDOW` 권한 + 사용자 허용 필요
 
 ---

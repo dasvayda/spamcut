@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SpamGuard"
+rootProject.name = "SpamCut"
 include(":app")

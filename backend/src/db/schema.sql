@@ -1,4 +1,4 @@
--- SpamGuard Database Schema (Prototype)
+-- SpamCut Database Schema (Prototype)
 -- Run this once against your PostgreSQL database
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

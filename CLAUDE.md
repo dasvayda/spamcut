@@ -1,4 +1,4 @@
-# SpamGuard — CLAUDE.md
+# SpamCut — CLAUDE.md
 
 > Claude Code 가 이 프로젝트에서 작업할 때 따르는 **역할 정의·작업 규칙·코딩 컨벤션** 문서.  
 > 모든 구현 전에 이 파일을 먼저 읽고 규칙을 따른다.
@@ -9,11 +9,12 @@
 
 | 항목 | 내용 |
 |------|------|
-| **서비스명** | SpamGuard |
+| **서비스명** | SpamCut |
 | **목적** | 군중 기반(Crowd-sourced) SMS 스팸·마케팅 문자 필터링 앱 |
 | **플랫폼** | Android (Kotlin) + Node.js 백엔드 (TypeScript) |
 | **배포** | Railway (백엔드 + PostgreSQL) |
-| **현재 단계** | Stage 2 Alpha 완료. 다음 작업은 `to-do-list.md` 참고 |
+| **패키지명** | `com.spamcut.app` (Android) / 도메인 `spamcut.com` |
+| **현재 단계** | Stage 3 Beta 완료. 다음은 Stage 3.5 Launch Readiness — `to-do-list.md` 참고 |
 
 ### 핵심 설계 원칙 (변경 금지)
 - **광고 없음** — 앱 내 광고 없이 운영. 수익은 SEO 웹(AdSense) + B2B 화이트리스트

@@ -1,4 +1,4 @@
-# SpamGuard ProGuard/R8 규칙
+# SpamCut ProGuard/R8 규칙
 
 # ── Retrofit / OkHttp ──────────────────────────────────────────
 -keepattributes Signature
@@ -14,7 +14,7 @@
 -keep class com.google.gson.** { *; }
 -keepattributes *Annotation*
 # API 모델 클래스 직렬화 보호
--keep class com.spamguard.app.data.api.** { *; }
+-keep class com.spamcut.app.data.api.** { *; }
 
 # ── Room ────────────────────────────────────────────────────────
 -keep class * extends androidx.room.RoomDatabase

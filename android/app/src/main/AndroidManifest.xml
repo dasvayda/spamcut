@@ -28,13 +28,13 @@
     <uses-permission android:name="android.permission.BIND_SCREENING_SERVICE" />
 
     <application
-        android:name=".SpamGuardApp"
+        android:name=".SpamCutApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SpamGuard"
+        android:theme="@style/Theme.SpamCut"
         android:usesCleartextTraffic="true">
 
         <activity
@@ -51,12 +51,12 @@
         <activity android:name=".ui.ReportActivity" android:exported="false" />
         <activity android:name=".ui.WalletActivity" android:exported="false" />
         <activity android:name=".ui.OnboardingActivity" android:exported="true">
-            <!-- 초대 딥링크: spamguard://invite?code=XXXX -->
+            <!-- 초대 딥링크: spamcut://invite?code=XXXX -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="spamguard" android:host="invite" />
+                <data android:scheme="spamcut" android:host="invite" />
             </intent-filter>
         </activity>
 
@@ -98,7 +98,7 @@
 
         <!-- FCM 푸시 수신 서비스 -->
         <service
-            android:name=".service.SpamGuardFirebaseService"
+            android:name=".service.SpamCutFirebaseService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -115,7 +115,7 @@
             </intent-filter>
         </service>
 
-        <!-- WorkManager 자동 초기화 비활성 — SpamGuardApp에서 HiltWorkerFactory로 초기화 -->
+        <!-- WorkManager 자동 초기화 비활성 — SpamCutApp에서 HiltWorkerFactory로 초기화 -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

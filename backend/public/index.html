@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>SpamGuard — 스팸 번호 조회·신고</title>
+  <title>SpamCut — 스팸 번호 조회·신고</title>
   <meta name="description" content="모르는 번호 받으셨나요? 스팸 여부를 즉시 확인하고 신고하세요.">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -341,7 +341,7 @@
 
 <!-- 헤더 -->
 <header>
-  <div class="logo">SpamGuard <span>스팸 번호 차단</span></div>
+  <div class="logo">SpamCut <span>스팸 번호 차단</span></div>
   <div id="headerUser" onclick="handleHeaderUser()">로그인</div>
 </header>
 
@@ -517,7 +517,7 @@
   <div id="screen-login" class="screen">
     <div class="login-wrap">
       <div class="login-icon">🛡️</div>
-      <div class="login-title">SpamGuard</div>
+      <div class="login-title">SpamCut</div>
       <div class="login-desc">
         전화번호로 바로 시작하세요.<br>별도 인증 없이 즉시 사용 가능합니다.
       </div>
@@ -1013,8 +1013,8 @@ function shareInviteLink() {
   const link = _generatedInviteLink || `${location.origin}/?code=${_generatedInviteCode}`
   if (navigator.share) {
     navigator.share({
-      title: 'SpamGuard 초대',
-      text: '스팸 번호 차단 앱 SpamGuard에 초대합니다. 가입하면 Token을 드려요!',
+      title: 'SpamCut 초대',
+      text: '스팸 번호 차단 앱 SpamCut에 초대합니다. 가입하면 Token을 드려요!',
       url: link,
     }).catch(() => {})
   } else {

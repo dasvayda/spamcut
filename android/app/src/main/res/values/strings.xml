@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SpamGuard</string>
+    <string name="app_name">SpamCut</string>
 
     <!-- 최근 수신 내역 화면 -->
     <string name="recent_title">최근 수신 내역</string>

@@ -1,4 +1,4 @@
-# SpamGuard — Crowd-Sourced SMS Spam Filter
+# SpamCut — Crowd-Sourced SMS Spam Filter
 
 Prototype implementation. See [to-do-list.md](to-do-list.md) for the full roadmap.
 

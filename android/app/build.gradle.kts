@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.spamguard.app"
+    namespace = "com.spamcut.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.spamguard.app"
+        applicationId = "com.spamcut.app"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

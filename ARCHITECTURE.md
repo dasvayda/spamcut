@@ -1,6 +1,6 @@
-# SpamGuard — Architecture
+# SpamCut — Architecture
 
-> SpamGuard 시스템의 **전체 구조 지도**. 컴포넌트 개요·데이터 흐름·기술 스택·배포 구성을 한눈에 본다.  
+> SpamCut 시스템의 **전체 구조 지도**. 컴포넌트 개요·데이터 흐름·기술 스택·배포 구성을 한눈에 본다.  
 > 세부 구현은 아래 §7 문서 인덱스의 **상세 문서**를 참조한다. 이 문서는 지도만 담는다.
 
 ---
@@ -201,7 +201,7 @@ POST /api/v1/report
 
 ```
 Railway Project
-├── spamguard-backend (Service)
+├── spamcut-backend (Service)
 │   ├── 시작 명령: npm run start
 │   ├── 포트: $PORT (Railway 자동 주입)
 │   └── 환경변수: DATABASE_URL, JWT_SECRET, NODE_ENV

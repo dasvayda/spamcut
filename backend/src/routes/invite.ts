@@ -31,9 +31,9 @@ export async function inviteRoutes(fastify: FastifyInstance) {
 
     return reply.send({
       code,
-      deep_link: `spamguard://invite?code=${code}`,
+      deep_link: `spamcut://invite?code=${code}`,
       // 공유용 웹 fallback (Stage 4 SEO 사이트 준비 후 실제 URL로 교체)
-      share_url: `https://spamguard.app/join?code=${code}`,
+      share_url: `https://spamcut.com/join?code=${code}`,
     })
   })
 

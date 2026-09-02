@@ -1,7 +1,7 @@
 {
-  "name": "spamguard-backend",
+  "name": "spamcut-backend",
   "version": "0.1.0",
-  "description": "SpamGuard backend - crowd-sourced SMS spam filter",
+  "description": "SpamCut backend - crowd-sourced SMS spam filter",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
