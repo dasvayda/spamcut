@@ -95,6 +95,22 @@
 > Token은 **서비스 내부 포인트**. Stage 5 이전까지 블록체인·외부 거래 없음.  
 > P2P 송금 = **초대(Invitation) 장치** — 친구에게 Token을 보내는 것이 서비스 소개.
 
+### 2.3 익명 사용자
+
+전화번호 없이도 신고할 수 있다. 익명도 `users` 행을 갖되(`phone_number IS NULL`) 영향력이 제한된다.
+
+| 항목 | 등록 사용자 | 익명 |
+|------|------------|------|
+| 초기 reputation | 100 | 30 |
+| 신고 가중치 (`reputation/20`) | 5 | 1 |
+| 일일 신고 한도 | 20건 | 5건 |
+| Token | 적립·사용 | **적립만** — 번호 등록 후 사용 |
+| 지갑·초대·이력 | 가능 | 번호 등록 필요 |
+
+> 익명 신고는 하루 한도를 다 써도 5점이라 검증 임계값(50)에 도달할 수 없다.
+> **익명만으로는 어떤 번호도 스팸으로 확정되지 않는다.**
+> 번호 등록 시 `phone_number`를 채우는 것으로 신고 이력이 그대로 귀속된다.
+
 ---
 
 ## 3. Android 앱 구조
@@ -149,16 +165,18 @@ recent_contacts (로컬 전용, 30일 보관)
 
 | 메서드 | 경로 | 인증 | 설명 |
 |--------|------|------|------|
+| POST | `/api/v1/auth/anon` | — | 익명 세션 발급 (전화번호 없이 신고 가능) |
 | POST | `/api/v1/auth/register` | — | 전화번호 가입·로그인 (JWT 반환) |
+| POST | `/api/v1/auth/claim` | JWT | 익명 세션에 번호 등록 → 정식 계정 승격 |
 | GET | `/api/v1/auth/me` | JWT | 내 정보 + Token 잔액 |
 | GET | `/api/v1/check-spam?number=` | — | 번호 스팸 조회 (Offline-first 폴백) |
 | POST | `/api/v1/check-spam/batch` | — | 번호 여러 개 일괄 조회 (최대 100) — 앱 "최신 정보 받기" |
 | POST | `/api/v1/report` | JWT | 스팸 신고 제출 |
 | GET | `/api/v1/reports/my` | JWT | 내 신고 이력 (cursor 페이지네이션) |
 | GET | `/api/v1/wallet` | JWT | 잔액·구독 상태·거래 이력 |
-| POST | `/api/v1/wallet/activate` | JWT | 30일 구독 활성화 (10 Token 소모) |
-| POST | `/api/v1/wallet/transfer` | JWT | P2P Token 송금 |
-| POST | `/api/v1/invite/generate` | JWT | 초대 코드 생성 |
+| POST | `/api/v1/wallet/activate` | JWT + 번호 등록 | 30일 구독 활성화 (10 Token 소모) |
+| POST | `/api/v1/wallet/transfer` | JWT + 번호 등록 | P2P Token 송금 |
+| POST | `/api/v1/invite/generate` | JWT + 번호 등록 | 초대 코드 생성 |
 | GET | `/api/v1/invite/my` | JWT | 내 초대 현황 |
 | POST | `/api/v1/admin/*` | JWT + is_admin | 관리자 전용 (신고 처리·통계) |
 | GET | `/health` | — | 헬스체크 |

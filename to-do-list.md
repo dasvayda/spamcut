@@ -123,16 +123,18 @@
   번호를 못 찾으면 직접 입력하도록 안내 (Android Chrome 동작 / iOS Safari 미지원 — 붙여넣기 폴백)
 - [x] **서비스 소개 화면** (`#about`) — 군중 검증 원리, RED/YELLOW 2단계,
   웹과 앱의 역할 차이, 광고 없음·Token, 개인정보 요약
+- [x] **익명 신고 → 번호 등록 시 소급 귀속** — 첫 진입에 전화번호를 요구하지 않는다.
+  익명도 `users` 행을 발급받아(`phone_number IS NULL`) reputation·한도 로직을 그대로 쓰고,
+  `POST /auth/claim` 으로 번호를 채우면 신고 이력이 이관 없이 귀속된다.
+  같은 번호의 기존 계정이 있으면 신고·Token 을 옮기고 병합한다.
+  익명 제한: reputation 30(가중치 1) · 하루 5건 · Token 적립만 가능
+- [x] **`spam_reports.reporter_id` NOT NULL 제약 해제** — 계정 삭제가 항상 실패하던 버그 수정.
+  `users.phone_number` 도 nullable 로 변경 (익명 사용자용)
+- [x] **정적 파일 캐시 헤더** — HTML·sw.js 에 `Cache-Control: no-cache`.
+  배포 후 브라우저가 예전 화면을 계속 보여주는 문제 방지
 
 ### 웹 — 남은 작업 (1차)
 
-- [ ] **익명 신고 → 나중에 계정 귀속** *(스키마·API 변경 — Confirm 필요)*
-  첫 진입에 전화번호를 요구하는 것이 최대 허들. 기기 익명 ID로 먼저 신고를 받고,
-  이력·Token·구독이 필요해질 때 번호 등록을 유도한 뒤 기존 신고를 소급 귀속시킨다
-- [ ] **`spam_reports.reporter_id` NOT NULL 제약 해제** — **현재 버그**.
-  `DELETE /api/v1/users/me`가 `reporter_id = NULL`로 익명화를 시도하는데
-  컬럼이 `NOT NULL REFERENCES users(id)`라 **계정 삭제가 항상 실패한다**.
-  익명 신고 도입 시에도 동일한 변경이 필요하므로 함께 처리
 - [ ] **개인정보처리방침 페이지** — 웹 내 정적 페이지로 우선 작성 (앱 심사 때 그대로 재사용)
 - [ ] **오탐 이의제기** — "이 번호는 스팸이 아니에요". 지인·회사 번호가 RED로 잡혔을 때
   사용자가 쓸 수 있는 수단이 현재 전혀 없다 *(API 추가 — Confirm 대상)*

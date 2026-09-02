@@ -35,6 +35,14 @@ server.register(fastifyStatic, {
   prefix: '/',
   // API 경로와 충돌하지 않도록 index.html만 fallback
   wildcard: false,
+  setHeaders: (res, filePath) => {
+    // HTML과 서비스 워커는 매 요청 재검증한다.
+    // 배포 직후 브라우저가 예전 화면을 계속 보여주는 것을 막기 위함 —
+    // 특히 sw.js 가 낡으면 캐시 전략 자체가 옛것으로 고정된다.
+    if (filePath.endsWith('.html') || filePath.endsWith('sw.js')) {
+      res.setHeader('Cache-Control', 'no-cache')
+    }
+  },
 })
 
 server.register(fastifyJwt, { secret: process.env.JWT_SECRET })

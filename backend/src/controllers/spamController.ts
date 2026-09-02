@@ -9,6 +9,7 @@ import {
   TOKEN_REWARD_BASE,
   TOKEN_REWARD_FIRST_MOVER_MULTIPLIER,
   DAILY_REPORT_LIMIT,
+  ANON_DAILY_REPORT_LIMIT,
   REPUTATION_PENALTY_FALSE_POSITIVE,
 } from '../types'
 
@@ -126,13 +127,21 @@ export async function submitReport(
   try {
     await client.query('BEGIN')
 
+    // 신고자 정보 — 익명(phone_number IS NULL)이면 한도가 더 낮다
+    const { rows: userRows } = await client.query(
+      `SELECT reputation_score, phone_number FROM users WHERE id = $1`,
+      [reporterId],
+    )
+    const isAnonymous = userRows[0]?.phone_number == null
+    const dailyLimit = isAnonymous ? ANON_DAILY_REPORT_LIMIT : DAILY_REPORT_LIMIT
+
     // 일일 신고 한도 확인
     const { rows: limitRows } = await client.query(
       `SELECT COUNT(*) AS cnt FROM spam_reports
        WHERE reporter_id = $1 AND created_at > NOW() - INTERVAL '24 hours'`,
       [reporterId],
     )
-    if (parseInt(limitRows[0].cnt, 10) >= DAILY_REPORT_LIMIT) {
+    if (parseInt(limitRows[0].cnt, 10) >= dailyLimit) {
       await client.query('ROLLBACK')
       return { error: 'daily_limit_exceeded' }
     }
@@ -148,11 +157,7 @@ export async function submitReport(
       return { error: 'duplicate_report' }
     }
 
-    // reputation 기반 가중치 계산
-    const { rows: userRows } = await client.query(
-      `SELECT reputation_score FROM users WHERE id = $1`,
-      [reporterId],
-    )
+    // reputation 기반 가중치 계산 (익명은 30 → 가중치 1)
     const reputation = userRows[0]?.reputation_score ?? 100
     const weight = Math.max(1, Math.floor(reputation / 20))
 

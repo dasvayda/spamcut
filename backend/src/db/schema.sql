@@ -3,9 +3,13 @@
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- phone_number 가 NULL 이면 익명 사용자다.
+-- 익명도 users 행을 갖게 해서 reputation·일일 한도·가중치 로직을 그대로 재사용하고,
+-- 나중에 번호를 등록하면 이 행에 phone_number 를 채우는 것만으로 신고 이력이 귀속된다.
+-- PostgreSQL 의 UNIQUE 는 NULL 을 여러 개 허용하므로 제약은 그대로 둔다.
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  phone_number VARCHAR(20) UNIQUE NOT NULL, -- E.164 format, e.g. +821012345678
+  phone_number VARCHAR(20) UNIQUE, -- E.164 format, e.g. +821012345678 / NULL = 익명
   reputation_score INT NOT NULL DEFAULT 100,
   is_admin BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -13,7 +17,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS spam_reports (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  reporter_id UUID NOT NULL REFERENCES users(id),
+  -- NULL 허용: GDPR 계정 삭제 시 신고는 남기고 신고자만 지운다 (익명화)
+  reporter_id UUID REFERENCES users(id),
   phone_number VARCHAR(20) NOT NULL,
   tag_type VARCHAR(10) NOT NULL CHECK (tag_type IN ('RED', 'YELLOW')),
   description TEXT,
@@ -70,6 +75,14 @@ CREATE TABLE IF NOT EXISTS fcm_tokens (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, token)
 );
+
+-- ─────────────────────────────────────────────────────────────
+-- 기존 DB 마이그레이션
+-- CREATE TABLE IF NOT EXISTS 는 이미 있는 테이블을 바꾸지 않으므로,
+-- 위 정의 변경분을 ALTER 로 다시 적용한다. 모두 반복 실행해도 안전하다.
+-- ─────────────────────────────────────────────────────────────
+ALTER TABLE users ALTER COLUMN phone_number DROP NOT NULL;
+ALTER TABLE spam_reports ALTER COLUMN reporter_id DROP NOT NULL;
 
 -- Indexes for hot paths
 CREATE INDEX IF NOT EXISTS idx_spam_reports_phone ON spam_reports(phone_number);

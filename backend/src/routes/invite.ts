@@ -11,7 +11,12 @@ const MAX_ACTIVE_INVITES = 10  // 동시에 사용 가능한 초대 코드 상�
 export async function inviteRoutes(fastify: FastifyInstance) {
   // POST /api/v1/invite/generate
   fastify.post('/invite/generate', { preHandler: [requireAuth] }, async (request, reply) => {
-    const { userId } = request.user as JwtPayload
+    const { userId, phoneNumber } = request.user as JwtPayload
+
+    // 초대 보상은 Token 이므로 번호 등록 후에만 발급한다
+    if (phoneNumber == null) {
+      return reply.status(403).send({ error: 'registration_required' })
+    }
 
     // 미사용 초대 코드 수 확인
     const { rows: activeRows } = await pool.query(

@@ -436,6 +436,19 @@
       </div>
       <button class="btn btn-primary" onclick="doReport()" id="reportBtn">신고 제출</button>
     </div>
+    <!-- 익명으로 신고한 뒤에만 표시 — 번호 등록 유도 -->
+    <div class="card" id="registerPrompt" style="display:none;background:var(--brand);color:#fff">
+      <div style="font-weight:700;margin-bottom:6px" id="registerPromptTitle"></div>
+      <div style="font-size:13px;line-height:1.6;opacity:.95">
+        번호를 등록하면 신고 이력을 확인하고, 검증으로 쌓인 Token을 쓸 수 있습니다.
+        지금까지 신고한 내용은 그대로 이어집니다.
+      </div>
+      <div class="mt12">
+        <button class="btn btn-sm" style="background:#fff;color:var(--brand)"
+          onclick="navigate('login')">번호 등록하기</button>
+      </div>
+    </div>
+
     <div class="card" style="font-size:13px;color:var(--gray-600);line-height:1.6">
       신고가 충분히 쌓이면 자동 검증되며, 검증 완료 시 Token이 지급됩니다.<br>
       허위 신고는 계정 평판 점수를 낮춥니다.
@@ -611,8 +624,8 @@
   <div id="screen-login" class="screen">
     <div class="login-wrap">
       <div class="login-icon">🛡️</div>
-      <div class="login-title">SpamCut</div>
-      <div class="login-desc">
+      <div class="login-title" id="loginTitle">SpamCut</div>
+      <div class="login-desc" id="loginDesc">
         전화번호로 바로 시작하세요.<br>별도 인증 없이 즉시 사용 가능합니다.
       </div>
       <div class="card" style="width:100%">
@@ -727,11 +740,18 @@ async function apiFetch(path, options = {}) {
 // ─────────────────────────────────────────────
 // 세션
 // ─────────────────────────────────────────────
+// 토큰은 있는데 번호가 없으면 익명 세션이다.
+// 익명도 신고는 할 수 있고, 이력·지갑·초대를 쓰려 할 때 번호 등록을 유도한다.
+function isAnonymous() {
+  return !!state.token && !state.phone
+}
+
 function saveSession(token, phone) {
   state.token = token
-  state.phone = phone
+  state.phone = phone || null
   localStorage.setItem('sg_token', token)
-  localStorage.setItem('sg_phone', phone)
+  if (phone) localStorage.setItem('sg_phone', phone)
+  else       localStorage.removeItem('sg_phone')
   updateHeaderUser()
 }
 
@@ -740,15 +760,40 @@ function clearSession() {
   state.phone = null
   localStorage.removeItem('sg_token')
   localStorage.removeItem('sg_phone')
+  localStorage.removeItem('sg_anon_reports')
   updateHeaderUser()
+}
+
+// 익명으로 신고한 건수 — 번호 등록을 유도할 때 "지금까지 N건" 으로 보여준다
+function anonReportCount() {
+  return parseInt(localStorage.getItem('sg_anon_reports') || '0', 10)
+}
+
+function bumpAnonReportCount() {
+  localStorage.setItem('sg_anon_reports', String(anonReportCount() + 1))
+}
+
+// 신고 전 세션 확보 — 없으면 익명 세션을 즉시 발급받는다 (사용자 입력 없음)
+async function ensureSession() {
+  if (state.token) return true
+  const { ok, data } = await apiFetch('/api/v1/auth/anon', { method: 'POST' })
+  if (!ok) return false
+  saveSession(data.token, null)
+  return true
 }
 
 function updateHeaderUser() {
   const el = document.getElementById('headerUser')
-  el.textContent = state.phone ? formatPhoneDisplay(state.phone) : '로그인'
+  if (state.phone)        el.textContent = formatPhoneDisplay(state.phone)
+  else if (state.token)   el.textContent = '번호 등록'
+  else                    el.textContent = '로그인'
 }
 
 function handleHeaderUser() {
+  if (isAnonymous()) {
+    navigate('login')
+    return
+  }
   if (state.token) {
     if (confirm(`${state.phone}\n로그아웃 하시겠습니까?`)) {
       clearSession()
@@ -763,14 +808,18 @@ function handleHeaderUser() {
 // ─────────────────────────────────────────────
 // 라우터 (hash 기반)
 // ─────────────────────────────────────────────
-const PROTECTED = ['report', 'wallet', 'invite', 'history', 'tx-history']
+// 신고(report)는 의도적으로 빠져 있다 — 익명으로도 바로 신고할 수 있어야 한다.
+// 나머지 화면은 개인 데이터·Token 을 다루므로 번호 등록이 필요하다.
+const PROTECTED = ['wallet', 'invite', 'history', 'tx-history']
 let _afterLogin = null  // 로그인 후 이동할 화면
 
 function navigate(screen, opts = {}) {
-  if (PROTECTED.includes(screen) && !state.token) {
+  // 익명 세션도 이 화면들에서는 번호 등록이 필요하다
+  if (PROTECTED.includes(screen) && (!state.token || isAnonymous())) {
     _afterLogin = screen
     screen = 'login'
   }
+  if (screen === 'login') updateLoginScreen()
 
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
   document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'))
@@ -843,11 +892,6 @@ function handleSharedContent(urlParams) {
       '문자 앱에서 번호를 복사해 붙여넣어 주세요.'
   }
   notice.style.display = 'block'
-
-  // 로그인이 없으면 navigate()가 login 으로 돌린다 — 왜 그런지 설명을 띄워준다
-  if (!state.token) {
-    document.getElementById('shareNoteLogin').style.display = 'block'
-  }
 
   // 새로고침 시 공유 내용이 다시 주입되지 않도록 URL 정리
   history.replaceState(null, '', '/#report')
@@ -956,6 +1000,12 @@ async function doReport() {
   btn.textContent = '제출 중...'
 
   try {
+    // 로그인 없이 신고 — 필요하면 익명 세션을 조용히 발급받는다
+    if (!(await ensureSession())) {
+      toast('일시적인 오류입니다. 잠시 후 다시 시도하세요')
+      return
+    }
+
     const { ok, status, data } = await apiFetch('/api/v1/report', {
       method: 'POST',
       body: JSON.stringify({ phone_number: phone, tag_type: state.reportTag, description: desc || null }),
@@ -965,10 +1015,18 @@ async function doReport() {
       toast('신고가 접수되었습니다. 검증 완료 시 Token이 지급됩니다.')
       document.getElementById('reportPhone').value = ''
       document.getElementById('reportDesc').value  = ''
+      document.getElementById('shareNotice').style.display = 'none'
       selectTag(null)
       state.reportTag = null
+
+      if (isAnonymous()) {
+        bumpAnonReportCount()
+        showRegisterPrompt()
+      }
     } else if (status === 429) {
-      toast('오늘 신고 한도(20건)를 초과했습니다')
+      toast(isAnonymous()
+        ? '익명 신고는 하루 5건까지입니다. 번호를 등록하면 20건까지 가능합니다'
+        : '오늘 신고 한도(20건)를 초과했습니다')
     } else if (status === 409) {
       toast('같은 번호를 이미 신고했습니다 (24시간 이내)')
     } else {
@@ -1279,6 +1337,28 @@ function loadMoreHistory() { loadHistory(false) }
 // ─────────────────────────────────────────────
 // 로그인/가입
 // ─────────────────────────────────────────────
+// 익명 신고 뒤 번호 등록을 유도하는 안내
+function showRegisterPrompt() {
+  const count = anonReportCount()
+  document.getElementById('registerPromptTitle').textContent =
+    `지금까지 신고 ${count}건이 익명으로 저장돼 있습니다`
+  document.getElementById('registerPrompt').style.display = 'block'
+}
+
+// 로그인 화면은 상황에 따라 "시작하기" 또는 "번호 등록"으로 바뀐다
+function updateLoginScreen() {
+  const anon = isAnonymous()
+  const count = anonReportCount()
+
+  document.getElementById('loginTitle').textContent = anon ? '번호 등록' : 'SpamCut'
+  document.getElementById('loginDesc').innerHTML = anon
+    ? (count > 0
+        ? `익명으로 신고한 ${count}건이 그대로 이어집니다.<br>번호를 등록하면 이력 확인과 Token 사용이 가능합니다.`
+        : '번호를 등록하면 이력 확인과 Token 사용이 가능합니다.<br>별도 인증 절차는 없습니다.')
+    : '전화번호로 바로 시작하세요.<br>별도 인증 없이 즉시 사용 가능합니다.'
+  document.getElementById('loginBtn').textContent = anon ? '등록하기' : '시작하기'
+}
+
 async function doLogin() {
   const phone = document.getElementById('loginPhone').value.trim()
   if (!validateE164(phone)) { toast('국가 코드 포함 형식으로 입력하세요 (예: +821012345678)'); return }
@@ -1291,14 +1371,26 @@ async function doLogin() {
     const body = { phone_number: phone }
     if (state.inviteCode) body.invite_code = state.inviteCode
 
-    const { ok, data } = await apiFetch('/api/v1/auth/register', {
+    // 익명 세션이면 승격(claim) — 그동안의 신고가 계정에 귀속된다
+    const anon = isAnonymous()
+    const { ok, data } = await apiFetch(anon ? '/api/v1/auth/claim' : '/api/v1/auth/register', {
       method: 'POST',
       body: JSON.stringify(body),
     })
 
     if (ok) {
+      const priorReports = anonReportCount()
       saveSession(data.token, phone)
-      if (data.is_new) {
+      localStorage.removeItem('sg_anon_reports')
+      document.getElementById('registerPrompt').style.display = 'none'
+
+      if (anon) {
+        toast(data.merged
+          ? '기존 계정에 신고 내역을 합쳤습니다'
+          : (priorReports > 0
+              ? `등록 완료! 신고 ${priorReports}건이 계정에 연결되었습니다`
+              : '등록 완료! 5 Token이 지급되었습니다'))
+      } else if (data.is_new) {
         toast('가입을 환영합니다! 5 Token이 지급되었습니다')
       } else {
         toast('로그인 되었습니다')
