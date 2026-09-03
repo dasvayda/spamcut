@@ -62,7 +62,7 @@
 | 영역 | 기술 | 비고 |
 |------|------|------|
 | **Android 앱** | Kotlin, Room DB, Retrofit, WindowManager | minSdk 26 (Android 8+) |
-| **웹 클라이언트** | Vanilla HTML/CSS/JS SPA, hash 라우팅 | `backend/public/index.html` — Fastify 정적 서빙 |
+| **웹 클라이언트** | Vanilla HTML/CSS/JS SPA, hash 라우팅 | `backend/public/index.html` — Fastify 정적 서빙. 개인정보처리방침은 `/privacy.html` |
 | **백엔드** | Node.js 20, TypeScript 5, Fastify 4 | Railway 배포 |
 | **데이터베이스** | PostgreSQL 15 | Railway 내장 |
 | **캐시** | Redis (Stage 3~) | Railway 플러그인으로 추가 |

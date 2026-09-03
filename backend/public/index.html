@@ -181,6 +181,10 @@
     .result-number { font-size: 14px; color: var(--gray-600); margin-bottom: 8px; }
     .result-score  { font-size: 13px; color: var(--gray-600); margin-bottom: 12px; }
 
+    .report-success h2 { font-size: 18px; margin-bottom: 10px; }
+    .report-success p { font-size: 14px; line-height: 1.7; color: var(--gray-600); margin-bottom: 10px; }
+    .policy-link { color: var(--brand); font-size: 13px; text-decoration: none; }
+
     /* 태그 선택 (신고) */
     .tag-group { display: flex; gap: 10px; margin-bottom: 14px; }
     .tag-btn {
@@ -411,7 +415,24 @@
     <div class="card" id="shareNotice" style="display:none;background:var(--yellow-lt);
       border-left:4px solid var(--yellow);font-size:13px;line-height:1.6"></div>
 
-    <div class="card">
+    <div class="card report-success" id="reportSuccess" style="display:none;background:var(--green-lt);border-left:4px solid var(--green)">
+      <h2>신고가 접수되었습니다</h2>
+      <p>
+        지금 바로 스팸 목록에 오르지 않습니다.
+        여러 사람의 신고가 모여 기준을 넘으면 검증이 끝납니다.
+        그 전에는 다른 사람이 조회해도 등록된 정보가 없을 수 있습니다.
+      </p>
+      <p>
+        검증이 끝나면 Token이 지급됩니다.
+        해당 번호를 처음 신고한 사람은 10, 함께 신고한 사람은 5입니다.
+      </p>
+      <div class="row mt12">
+        <button class="btn btn-primary" onclick="resetReportForm()">다른 번호 신고</button>
+        <button class="btn btn-outline" onclick="navigate('lookup')">번호 조회</button>
+      </div>
+    </div>
+
+    <div class="card" id="reportFormCard">
       <div class="input-group">
         <div class="label">전화번호</div>
         <input type="tel" id="reportPhone" placeholder="+821012345678"
@@ -449,7 +470,7 @@
       </div>
     </div>
 
-    <div class="card" style="font-size:13px;color:var(--gray-600);line-height:1.6">
+    <div class="card" id="reportHintCard" style="font-size:13px;color:var(--gray-600);line-height:1.6">
       신고가 충분히 쌓이면 자동 검증되며, 검증 완료 시 Token이 지급됩니다.<br>
       허위 신고는 계정 평판 점수를 낮춥니다.
     </div>
@@ -613,6 +634,9 @@
         신고하지 않은 번호와 문자 내용은 서버로 보내지 않습니다.
         <b>신고 버튼을 눌렀을 때만</b> 전송됩니다.
       </div>
+      <div class="mt12">
+        <a class="policy-link" href="/privacy.html">개인정보처리방침 전문</a>
+      </div>
     </div>
 
     <div class="card" style="text-align:center">
@@ -637,7 +661,8 @@
         </div>
         <button class="btn btn-primary" onclick="doLogin()" id="loginBtn">시작하기</button>
         <p style="font-size:12px;color:var(--gray-600);margin-top:10px;text-align:center">
-          가입한 적 없으면 자동으로 계정이 만들어집니다
+          가입한 적 없으면 자동으로 계정이 만들어집니다<br>
+          <a class="policy-link" href="/privacy.html">개인정보처리방침</a>
         </p>
       </div>
       <!-- 문자 공유로 들어왔는데 로그인이 필요한 경우 — 왜 이 화면인지 설명한다 -->
@@ -832,6 +857,8 @@ function navigate(screen, opts = {}) {
 
   window.location.hash = screen === 'lookup' ? '' : screen
 
+  if (screen === 'report' && !opts.fromSubmit) resetReportForm({ keepValues: true })
+
   // 화면별 데이터 로드
   if (screen === 'wallet')     loadWallet()
   if (screen === 'invite')     loadInviteStats()
@@ -962,14 +989,14 @@ function showLookupResult(number, data) {
     card.classList.add('safe')
     label.className = 'result-label safe'
     label.textContent = '등록된 스팸 정보 없음'
-    numEl.textContent = number
+    numEl.textContent = formatPhoneDisplay(number)
     score.textContent = '현재 신고된 내역이 없습니다. 의심스러우면 신고해 주세요.'
   } else {
     const isRed = data.tagType === 'RED'
     card.classList.add(isRed ? 'red' : 'yellow')
     label.className = `result-label ${isRed ? 'red' : 'yellow'}`
     label.textContent = isRed ? '위험 스팸 번호' : '마케팅 문자 번호'
-    numEl.textContent = number
+    numEl.textContent = formatPhoneDisplay(number)
     score.textContent = `신뢰도 점수: ${data.score ?? '—'}`
   }
 }
@@ -1012,12 +1039,12 @@ async function doReport() {
     })
 
     if (ok) {
-      toast('신고가 접수되었습니다. 검증 완료 시 Token이 지급됩니다.')
       document.getElementById('reportPhone').value = ''
       document.getElementById('reportDesc').value  = ''
       document.getElementById('shareNotice').style.display = 'none'
       selectTag(null)
       state.reportTag = null
+      showReportSuccess()
 
       if (isAnonymous()) {
         bumpAnonReportCount()
@@ -1312,7 +1339,7 @@ async function loadHistory(reset = false) {
       const date = new Date(r.created_at).toLocaleDateString('ko-KR', { month:'short', day:'numeric' })
       return `<div class="list-item">
         <div>
-          <div class="list-item-main">${r.phone_number}</div>
+          <div class="list-item-main">${formatPhoneDisplay(r.phone_number)}</div>
           <div class="list-item-sub">${date} · ${r.description || '설명 없음'}</div>
           <div style="margin-top:4px">
             <span class="badge ${tagClass}">${tagText}</span>
@@ -1429,12 +1456,59 @@ function formatPhoneInput(input) {
 }
 
 function formatPhoneDisplay(phone) {
-  if (!phone) return ''
-  if (phone.startsWith('+82')) {
-    const local = phone.slice(3)
-    if (local.length === 10) return `010-${local.slice(1,5)}-${local.slice(5)}`
+  if (!phone || phone === '—') return phone || ''
+  const trimmed = String(phone).trim()
+  const digits = trimmed.replace(/\D/g, '')
+
+  let national = null
+  if (trimmed.startsWith('+82') || digits.startsWith('82')) {
+    national = digits.startsWith('82') ? digits.slice(2) : digits
+  } else if (/^0\d{8,10}$/.test(digits)) {
+    national = digits.slice(1)
+  } else {
+    return trimmed
   }
-  return phone
+
+  // 휴대폰 010-XXXX-XXXX (+82 10xxxxxxxx)
+  if (national.length === 10 && national.startsWith('10')) {
+    return `010-${national.slice(2, 6)}-${national.slice(6)}`
+  }
+  if (national.length === 11 && national.startsWith('010')) {
+    return `010-${national.slice(3, 7)}-${national.slice(7)}`
+  }
+  // 서울 02
+  if (national.startsWith('2')) {
+    const rest = national.slice(1)
+    if (rest.length === 7) return `02-${rest.slice(0, 3)}-${rest.slice(3)}`
+    if (rest.length === 8) return `02-${rest.slice(0, 4)}-${rest.slice(4)}`
+  }
+  // 지역번호 031 등
+  if (national.length === 9) {
+    return `0${national.slice(0, 2)}-${national.slice(2, 5)}-${national.slice(5)}`
+  }
+  if (national.length === 10) {
+    return `0${national.slice(0, 2)}-${national.slice(2, 6)}-${national.slice(6)}`
+  }
+  return trimmed
+}
+
+function showReportSuccess() {
+  document.getElementById('reportFormCard').style.display = 'none'
+  document.getElementById('reportHintCard').style.display = 'none'
+  document.getElementById('reportSuccess').style.display = 'block'
+}
+
+function resetReportForm(opts = {}) {
+  document.getElementById('reportSuccess').style.display = 'none'
+  document.getElementById('reportFormCard').style.display = 'block'
+  document.getElementById('reportHintCard').style.display = 'block'
+  if (!opts.keepValues) {
+    document.getElementById('reportPhone').value = ''
+    document.getElementById('reportDesc').value = ''
+    document.getElementById('shareNotice').style.display = 'none'
+    selectTag(null)
+    state.reportTag = null
+  }
 }
 
 let _toastTimer = null
