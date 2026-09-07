@@ -133,8 +133,18 @@
       background: var(--white);
       color: var(--gray-800);
     }
-    input:focus, textarea:focus { border-color: var(--brand); }
+    input:focus, textarea:focus, select:focus { border-color: var(--brand); }
     textarea { resize: vertical; min-height: 80px; }
+
+    .phone-row { display: flex; gap: 8px; align-items: stretch; }
+    .phone-row .phone-cc {
+      width: 8.2rem;
+      flex: 0 0 8.2rem;
+      padding-left: 10px;
+      padding-right: 8px;
+    }
+    .phone-row .phone-national { flex: 1; width: auto; min-width: 0; }
+    .phone-hint { font-size: 12px; color: var(--gray-600); margin-top: 8px; text-align: center; }
 
     /* 버튼 */
     .btn {
@@ -173,11 +183,13 @@
     .result-card.show { display: block; }
     .result-card.red    { background: var(--red-lt);    border-left: 4px solid var(--red); }
     .result-card.yellow { background: var(--yellow-lt); border-left: 4px solid var(--yellow); }
-    .result-card.safe   { background: var(--green-lt);  border-left: 4px solid var(--green); }
+    .result-card.safe    { background: var(--green-lt);  border-left: 4px solid var(--green); }
+    .result-card.pending { background: #E3F2FD; border-left: 4px solid var(--brand); }
     .result-label { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-    .result-label.red    { color: var(--red-text); }
-    .result-label.yellow { color: var(--yellow-text); }
-    .result-label.safe   { color: var(--green-text); }
+    .result-label.red     { color: var(--red-text); }
+    .result-label.yellow  { color: var(--yellow-text); }
+    .result-label.safe    { color: var(--green-text); }
+    .result-label.pending { color: var(--brand); }
     .result-number { font-size: 14px; color: var(--gray-600); margin-bottom: 8px; }
     .result-score  { font-size: 13px; color: var(--gray-600); margin-bottom: 12px; }
 
@@ -378,16 +390,17 @@
 
     <p class="page-title">번호 조회</p>
     <div class="card">
-      <div class="label">전화번호 입력</div>
-      <input type="tel" id="lookupInput" placeholder="+821012345678"
-        oninput="formatPhoneInput(this)"
-        onkeydown="if(event.key==='Enter') doLookup()">
+      <div class="label">전화번호</div>
+      <div class="phone-row">
+        <select class="phone-cc" aria-label="국가번호"></select>
+        <input type="tel" id="lookupInput" class="phone-national" placeholder="01012345678"
+          autocomplete="tel" inputmode="numeric"
+          onkeydown="if(event.key==='Enter') doLookup()">
+      </div>
       <div class="mt12">
         <button class="btn btn-primary" onclick="doLookup()" id="lookupBtn">조회하기</button>
       </div>
-      <p style="font-size:12px;color:var(--gray-600);margin-top:8px;text-align:center">
-        국가 코드 포함 형식 &nbsp;·&nbsp; 예: +82 10-1234-5678
-      </p>
+      <p class="phone-hint">하이픈 없이 01012345678 처럼 입력해도 됩니다</p>
     </div>
 
     <div id="lookupResult" class="result-card">
@@ -435,8 +448,12 @@
     <div class="card" id="reportFormCard">
       <div class="input-group">
         <div class="label">전화번호</div>
-        <input type="tel" id="reportPhone" placeholder="+821012345678"
-          oninput="formatPhoneInput(this)">
+        <div class="phone-row">
+          <select class="phone-cc" aria-label="국가번호"></select>
+          <input type="tel" id="reportPhone" class="phone-national" placeholder="01012345678"
+            autocomplete="tel" inputmode="numeric">
+        </div>
+        <p class="phone-hint">국가번호는 왼쪽에서 고르고, 번호만 입력하면 됩니다</p>
       </div>
       <div class="input-group">
         <div class="label">신고 유형</div>
@@ -503,8 +520,11 @@
       <div class="card-title">Token 송금</div>
       <div class="input-group">
         <div class="label">받는 사람 전화번호</div>
-        <input type="tel" id="transferPhone" placeholder="+821098765432"
-          oninput="formatPhoneInput(this)">
+        <div class="phone-row">
+          <select class="phone-cc" aria-label="국가번호"></select>
+          <input type="tel" id="transferPhone" class="phone-national" placeholder="01012345678"
+            autocomplete="tel" inputmode="numeric">
+        </div>
       </div>
       <div class="input-group">
         <div class="label">송금량</div>
@@ -654,10 +674,13 @@
       </div>
       <div class="card" style="width:100%">
         <div class="input-group">
-          <div class="label">전화번호 (국가 코드 포함)</div>
-          <input type="tel" id="loginPhone" placeholder="+821012345678"
-            oninput="formatPhoneInput(this)"
-            onkeydown="if(event.key==='Enter') doLogin()">
+          <div class="label">전화번호</div>
+          <div class="phone-row">
+            <select class="phone-cc" aria-label="국가번호"></select>
+            <input type="tel" id="loginPhone" class="phone-national" placeholder="01012345678"
+              autocomplete="tel" inputmode="numeric"
+              onkeydown="if(event.key==='Enter') doLogin()">
+          </div>
         </div>
         <button class="btn btn-primary" onclick="doLogin()" id="loginBtn">시작하기</button>
         <p style="font-size:12px;color:var(--gray-600);margin-top:10px;text-align:center">
@@ -801,7 +824,7 @@ function bumpAnonReportCount() {
 // 신고 전 세션 확보 — 없으면 익명 세션을 즉시 발급받는다 (사용자 입력 없음)
 async function ensureSession() {
   if (state.token) return true
-  const { ok, data } = await apiFetch('/api/v1/auth/anon', { method: 'POST' })
+  const { ok, data } = await apiFetch('/api/v1/auth/anon', { method: 'POST', body: '{}' })
   if (!ok) return false
   saveSession(data.token, null)
   return true
@@ -909,7 +932,7 @@ function handleSharedContent(urlParams) {
   const found = extractPhoneNumber(body)
   const notice = document.getElementById('shareNotice')
   if (found) {
-    document.getElementById('reportPhone').value = found
+    setPhoneFromE164('reportPhone', found)
     notice.innerHTML =
       '공유한 내용에서 번호를 찾았습니다. <b>발신번호가 맞는지 확인</b>해 주세요. ' +
       '문자 본문에 적힌 다른 번호일 수 있습니다.'
@@ -931,18 +954,10 @@ function handleSharedContent(urlParams) {
 function extractPhoneNumber(text) {
   const candidates = text.match(/(?:\+|0)[\d\-\s]{7,20}\d/g) || []
   for (const raw of candidates) {
-    const e164 = toE164(raw.replace(/[\s\-]/g, ''))
+    const e164 = toE164(raw, defaultDial())
     if (e164) return e164
   }
   return null
-}
-
-function toE164(digits) {
-  let candidate = null
-  if (digits.startsWith('+'))       candidate = digits
-  else if (digits.startsWith('00')) candidate = '+' + digits.slice(2)
-  else if (digits.startsWith('0'))  candidate = '+82' + digits.slice(1)
-  return candidate && validateE164(candidate) ? candidate : null
 }
 
 window.addEventListener('hashchange', () => {
@@ -956,8 +971,8 @@ window.addEventListener('hashchange', () => {
 let _lastLookedUp = ''
 
 async function doLookup() {
-  const num = document.getElementById('lookupInput').value.trim()
-  if (!validateE164(num)) { toast('국가 코드 포함 형식으로 입력하세요 (예: +821012345678)'); return }
+  const num = readPhoneE164('lookupInput')
+  if (!num) { toast('전화번호를 확인해 주세요'); return }
 
   const btn = document.getElementById('lookupBtn')
   btn.disabled = true
@@ -985,24 +1000,31 @@ function showLookupResult(number, data) {
 
   card.className = 'result-card show'
 
-  if (!data.isSpam) {
-    card.classList.add('safe')
-    label.className = 'result-label safe'
-    label.textContent = '등록된 스팸 정보 없음'
-    numEl.textContent = formatPhoneDisplay(number)
-    score.textContent = '현재 신고된 내역이 없습니다. 의심스러우면 신고해 주세요.'
-  } else {
+  if (data.isSpam) {
     const isRed = data.tagType === 'RED'
     card.classList.add(isRed ? 'red' : 'yellow')
     label.className = `result-label ${isRed ? 'red' : 'yellow'}`
     label.textContent = isRed ? '위험 스팸 번호' : '마케팅 문자 번호'
     numEl.textContent = formatPhoneDisplay(number)
     score.textContent = `신뢰도 점수: ${data.score ?? '—'}`
+  } else if (data.myReport && data.myReport.status === 'PENDING') {
+    const kind = data.myReport.tagType === 'RED' ? '위험 스팸' : '마케팅'
+    card.classList.add('pending')
+    label.className = 'result-label pending'
+    label.textContent = '내가 신고함 · 아직 검증 전'
+    numEl.textContent = formatPhoneDisplay(number)
+    score.textContent = `${kind}으로 접수했습니다. 여러 신고가 모이면 목록에 표시됩니다.`
+  } else {
+    card.classList.add('safe')
+    label.className = 'result-label safe'
+    label.textContent = '등록된 스팸 정보 없음'
+    numEl.textContent = formatPhoneDisplay(number)
+    score.textContent = '현재 신고된 내역이 없습니다. 의심스러우면 신고해 주세요.'
   }
 }
 
 function goReportWith() {
-  document.getElementById('reportPhone').value = _lastLookedUp
+  setPhoneFromE164('reportPhone', _lastLookedUp)
   navigate('report')
 }
 
@@ -1016,10 +1038,10 @@ function selectTag(tag) {
 }
 
 async function doReport() {
-  const phone = document.getElementById('reportPhone').value.trim()
+  const phone = readPhoneE164('reportPhone')
   const desc  = document.getElementById('reportDesc').value.trim()
 
-  if (!validateE164(phone))  { toast('올바른 전화번호를 입력하세요'); return }
+  if (!phone)                { toast('전화번호를 확인해 주세요'); return }
   if (!state.reportTag)      { toast('신고 유형을 선택하세요'); return }
 
   const btn = document.getElementById('reportBtn')
@@ -1149,13 +1171,13 @@ async function doActivate() {
 }
 
 async function doTransfer() {
-  const phone  = document.getElementById('transferPhone').value.trim()
+  const phone  = readPhoneE164('transferPhone')
   const amount = parseInt(document.getElementById('transferAmount').value.trim(), 10)
 
-  if (!validateE164(phone))       { toast('올바른 전화번호를 입력하세요'); return }
+  if (!phone)                     { toast('전화번호를 확인해 주세요'); return }
   if (!amount || amount < 1)      { toast('송금량을 입력하세요'); return }
 
-  if (!confirm(`${phone} 에게 ${amount} Token을 송금하시겠습니까?`)) return
+  if (!confirm(`${formatPhoneDisplay(phone)} 에게 ${amount} Token을 송금하시겠습니까?`)) return
 
   try {
     const { ok, status, data } = await apiFetch('/api/v1/wallet/transfer', {
@@ -1387,8 +1409,8 @@ function updateLoginScreen() {
 }
 
 async function doLogin() {
-  const phone = document.getElementById('loginPhone').value.trim()
-  if (!validateE164(phone)) { toast('국가 코드 포함 형식으로 입력하세요 (예: +821012345678)'); return }
+  const phone = readPhoneE164('loginPhone')
+  if (!phone) { toast('전화번호를 확인해 주세요'); return }
 
   const btn = document.getElementById('loginBtn')
   btn.disabled = true
@@ -1443,16 +1465,146 @@ async function doLogin() {
 // 유틸
 // ─────────────────────────────────────────────
 function validateE164(num) {
-  return /^\+[1-9]\d{6,14}$/.test(num.replace(/[\s\-()]/g, ''))
+  return /^\+[1-9]\d{6,14}$/.test(String(num || '').replace(/[\s\-()]/g, ''))
 }
 
-function formatPhoneInput(input) {
-  // 입력 중 공백·대시 허용 — 제출 시 정규화는 서버에서 처리
-  // 국가코드가 없으면 +82 자동 prefix (한국 기본)
-  let v = input.value
-  if (v.length === 1 && v !== '+') {
-    input.value = '+82' + v
+// 국가번호 목록 — 드롭다운에 보이는 것과 IP 매핑용
+const COUNTRIES = [
+  ['KR','82','한국'], ['JP','81','일본'], ['CN','86','중국'], ['US','1','미국·캐나다'],
+  ['VN','84','베트남'], ['TH','66','태국'], ['PH','63','필리핀'], ['ID','62','인도네시아'],
+  ['TW','886','대만'], ['HK','852','홍콩'], ['SG','65','싱가포르'], ['MY','60','말레이시아'],
+  ['AU','61','호주'], ['GB','44','영국'], ['DE','49','독일'], ['FR','33','프랑스'],
+  ['IN','91','인도'], ['RU','7','러시아'], ['BR','55','브라질'], ['MX','52','멕시코'],
+  ['NZ','64','뉴질랜드'], ['AE','971','아랍에미리트'], ['TR','90','터키'], ['IT','39','이탈리아'],
+  ['ES','34','스페인'], ['NL','31','네덜란드'], ['UA','380','우크라이나'], ['MN','976','몽골'],
+  ['KH','855','캄보디아'], ['LA','856','라오스'], ['MM','95','미얀마'],
+]
+const ISO_TO_DIAL = {
+  KR:'82', JP:'81', CN:'86', US:'1', CA:'1', VN:'84', TH:'66', PH:'63', ID:'62',
+  TW:'886', HK:'852', SG:'65', MY:'60', AU:'61', NZ:'64', GB:'44', IE:'353',
+  DE:'49', FR:'33', IT:'39', ES:'34', NL:'31', BE:'32', AT:'43', CH:'41',
+  SE:'46', NO:'47', DK:'45', FI:'358', PL:'48', PT:'351', GR:'30', CZ:'420',
+  RO:'40', HU:'36', UA:'380', RU:'7', KZ:'7', TR:'90', IN:'91', PK:'92',
+  BD:'880', LK:'94', NP:'977', BR:'55', MX:'52', AR:'54', CL:'56', CO:'57',
+  PE:'51', AE:'971', SA:'966', IL:'972', EG:'20', ZA:'27', NG:'234', KE:'254',
+  MN:'976', KH:'855', LA:'856', MM:'95', MO:'853',
+}
+const DIALS_BY_LEN = [...new Set([...COUNTRIES.map(c => c[1]), ...Object.values(ISO_TO_DIAL)])]
+  .sort((a, b) => b.length - a.length)
+
+function defaultDial() {
+  const el = document.querySelector('.phone-cc')
+  return (el && el.value) || localStorage.getItem('sg_cc_user') || '82'
+}
+
+function matchDialPrefix(digits) {
+  return DIALS_BY_LEN.find(d => digits.startsWith(d)) || null
+}
+
+function ensureDialOption(select, dial, label) {
+  if ([...select.options].some(o => o.value === dial)) return
+  const opt = document.createElement('option')
+  opt.value = dial
+  opt.textContent = label || `+${dial}`
+  select.appendChild(opt)
+}
+
+function syncDialSelects(dial, persist) {
+  document.querySelectorAll('.phone-cc').forEach(sel => {
+    ensureDialOption(sel, dial, `+${dial}`)
+    sel.value = dial
+  })
+  if (persist) localStorage.setItem('sg_cc_user', dial)
+}
+
+function initPhoneInputs() {
+  const saved = localStorage.getItem('sg_cc_user') || '82'
+  document.querySelectorAll('.phone-cc').forEach(sel => {
+    if (sel.options.length === 0) {
+      COUNTRIES.forEach(([iso, dial, name]) => {
+        if ([...sel.options].some(o => o.value === dial)) return
+        const opt = document.createElement('option')
+        opt.value = dial
+        opt.textContent = `${name} +${dial}`
+        sel.appendChild(opt)
+      })
+    }
+    ensureDialOption(sel, saved, `+${saved}`)
+    sel.value = saved
+    sel.onchange = () => syncDialSelects(sel.value, true)
+  })
+  detectDialFromIp()
+}
+
+function detectDialFromIp() {
+  if (localStorage.getItem('sg_cc_user')) return
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 2500)
+  fetch('https://api.country.is/', { signal: ctrl.signal })
+    .then(r => r.json())
+    .then(j => {
+      const iso = String(j.country || '').toUpperCase()
+      const dial = ISO_TO_DIAL[iso]
+      if (dial && !localStorage.getItem('sg_cc_user')) {
+        const row = COUNTRIES.find(c => c[0] === iso)
+        document.querySelectorAll('.phone-cc').forEach(sel => {
+          ensureDialOption(sel, dial, row ? `${row[2]} +${dial}` : `${iso} +${dial}`)
+        })
+        syncDialSelects(dial, false)
+      }
+    })
+    .catch(() => {})
+    .finally(() => clearTimeout(timer))
+}
+
+function toE164(raw, dial) {
+  if (!raw) return null
+  let s = String(raw).trim().replace(/[\s\-().]/g, '')
+  if (!s) return null
+  if (s.startsWith('00')) s = '+' + s.slice(2)
+
+  if (s.startsWith('+')) {
+    const rest = s.slice(1).replace(/\D/g, '')
+    const found = matchDialPrefix(rest)
+    if (!found) return validateE164('+' + rest) ? '+' + rest : null
+    let nat = rest.slice(found.length)
+    if (nat.startsWith('0')) nat = nat.slice(1)
+    const e164 = '+' + found + nat
+    return validateE164(e164) ? e164 : null
   }
+
+  let digits = s.replace(/\D/g, '')
+  const cc = dial || defaultDial()
+  // 칸에 국가번호가 있는데 번호에도 같은 국가번호를 붙인 경우
+  if (cc && digits.startsWith(cc) && digits.length - cc.length >= 8) {
+    digits = digits.slice(cc.length)
+  }
+  if (digits.startsWith('0')) digits = digits.slice(1)
+  const e164 = '+' + cc + digits
+  return validateE164(e164) ? e164 : null
+}
+
+function readPhoneE164(inputId) {
+  const input = document.getElementById(inputId)
+  const row = input && input.closest('.phone-row')
+  const dial = row ? row.querySelector('.phone-cc').value : defaultDial()
+  return toE164(input.value, dial)
+}
+
+function setPhoneFromE164(inputId, e164) {
+  const input = document.getElementById(inputId)
+  if (!input || !e164) return
+  const row = input.closest('.phone-row')
+  const rest = e164.replace(/^\+/, '').replace(/\D/g, '')
+  const found = matchDialPrefix(rest) || '82'
+  let nat = rest.slice(found.length)
+  if (found === '82' && nat && !nat.startsWith('0')) nat = '0' + nat
+  if (row) {
+    const sel = row.querySelector('.phone-cc')
+    ensureDialOption(sel, found, `+${found}`)
+    sel.value = found
+  }
+  input.value = nat
 }
 
 function formatPhoneDisplay(phone) {
@@ -1570,6 +1722,7 @@ if ('serviceWorker' in navigator) {
 // ─────────────────────────────────────────────
 // 초기화
 // ─────────────────────────────────────────────
+initPhoneInputs()
 initRoute()
 </script>
 </body>

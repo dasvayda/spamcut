@@ -16,24 +16,52 @@ import {
 const SPAM_CACHE_TTL = 86400 // 24h
 
 export type SpamCheckResult =
-  | { isSpam: false; whitelisted?: true; company?: string }
+  | {
+      isSpam: false
+      whitelisted?: true
+      company?: string
+      myReport?: { status: 'PENDING'; tagType: TagType }
+    }
   | { isSpam: true; tagType: TagType; score: number }
 
-export async function checkSpam(phoneNumber: string) {
+async function attachMyPendingReport(
+  result: SpamCheckResult,
+  phoneNumber: string,
+  userId?: string,
+): Promise<SpamCheckResult> {
+  if (!userId || result.isSpam) return result
+  if ('whitelisted' in result && result.whitelisted) return result
+
+  const { rows } = await pool.query(
+    `SELECT tag_type FROM spam_reports
+     WHERE reporter_id = $1 AND phone_number = $2 AND status = 'PENDING'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId, phoneNumber],
+  )
+  if (rows.length === 0) return result
+  return {
+    ...result,
+    myReport: { status: 'PENDING', tagType: rows[0].tag_type as TagType },
+  }
+}
+
+export async function checkSpam(phoneNumber: string, userId?: string) {
   // 화이트리스트 확인 — 인증된 기업 번호는 항상 안전
   const { rows: wlRows } = await pool.query(
     `SELECT company_name FROM whitelist WHERE phone_number = $1`,
     [phoneNumber],
   )
   if (wlRows.length > 0) {
-    return { isSpam: false, whitelisted: true, company: wlRows[0].company_name }
+    return { isSpam: false as const, whitelisted: true as const, company: wlRows[0].company_name }
   }
 
   // Redis 캐시 확인 (있으면 DB 조회 생략)
+  // myReport 는 이용자마다 다르므로 캐시에 넣지 않고, 공개 결과만 캐시한다
   const cacheKey = `spam:${phoneNumber}`
   const cached = await redisGet(cacheKey)
   if (cached) {
-    return JSON.parse(cached)
+    return attachMyPendingReport(JSON.parse(cached) as SpamCheckResult, phoneNumber, userId)
   }
 
   const { rows } = await pool.query(
@@ -43,7 +71,7 @@ export async function checkSpam(phoneNumber: string) {
     [phoneNumber],
   )
 
-  const result =
+  const result: SpamCheckResult =
     rows.length === 0
       ? { isSpam: false }
       : { isSpam: true, tagType: rows[0].tag_type as TagType, score: rows[0].aggregate_score }
@@ -51,7 +79,7 @@ export async function checkSpam(phoneNumber: string) {
   // 결과 캐싱 (스팸 여부 무관하게 캐시)
   await redisSet(cacheKey, JSON.stringify(result), SPAM_CACHE_TTL)
 
-  return result
+  return attachMyPendingReport(result, phoneNumber, userId)
 }
 
 // 여러 번호를 한 번에 조회 — 앱의 "최신 정보 받기"(최근 수신 내역 일괄 갱신)에서 사용

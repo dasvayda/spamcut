@@ -11,15 +11,25 @@ import { JwtPayload, TagType } from '../types'
 
 const e164 = z.string().regex(/^\+[1-9]\d{6,14}$/, 'Must be E.164 format')
 
+async function optionalUserId(request: { jwtVerify: () => Promise<unknown>; user?: JwtPayload }) {
+  try {
+    await request.jwtVerify()
+    return (request.user as JwtPayload).userId
+  } catch {
+    return undefined
+  }
+}
+
 export async function spamRoutes(fastify: FastifyInstance) {
   // GET /api/v1/check-spam?number=+821012345678
-  // Public endpoint – no auth required (clients may call without a logged-in user)
+  // 공개 조회. JWT가 있으면 내 PENDING 신고를 결과에 붙여 준다.
   fastify.get<{ Querystring: { number: string } }>('/check-spam', async (request, reply) => {
     const parse = e164.safeParse(request.query.number)
     if (!parse.success) {
       return reply.status(400).send({ error: 'Invalid phone number format. Use E.164, e.g. +821012345678' })
     }
-    const result = await checkSpam(parse.data)
+    const userId = await optionalUserId(request)
+    const result = await checkSpam(parse.data, userId)
     return reply.send(result)
   })
 
