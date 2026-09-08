@@ -145,6 +145,32 @@ export async function checkSpamBatch(
   return unique.map((number) => ({ number, ...(resolved.get(number) as SpamCheckResult) }))
 }
 
+// 앱 동기화용 — 확정(ACTIVE)된 번호만. 점수는 내려주지 않는다.
+export async function listConfirmedSpam(since: string | undefined, limit: number) {
+  const sinceTs = since && since.length > 0 ? since : '1970-01-01T00:00:00.000Z'
+  const { rows } = await pool.query(
+    `SELECT phone_number, tag_type, updated_at
+     FROM spam_master
+     WHERE global_status = 'ACTIVE'
+       AND updated_at > $1::timestamptz
+     ORDER BY updated_at ASC
+     LIMIT $2`,
+    [sinceTs, limit],
+  )
+
+  const items = (
+    rows as Array<{ phone_number: string; tag_type: TagType; updated_at: Date | string }>
+  ).map((row) => ({
+    phone_number: row.phone_number,
+    tag_type: row.tag_type,
+    updated_at:
+      row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+  }))
+
+  const nextSince = items.length === limit ? items[items.length - 1].updated_at : null
+  return { items, next_since: nextSince }
+}
+
 export async function submitReport(
   reporterId: string,
   phoneNumber: string,

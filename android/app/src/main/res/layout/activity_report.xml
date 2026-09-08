@@ -12,7 +12,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="스팸 번호 신고"
+            android:text="@string/report_screen_title"
             android:textSize="20sp"
             android:textStyle="bold"
             android:layout_marginBottom="4dp"/>
@@ -20,7 +20,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="제출하면 이 번호가 서버 DB에 등록되고, 다른 사용자에게도 경고가 표시됩니다."
+            android:text="@string/report_screen_subtitle"
             android:textSize="13sp"
             android:layout_marginBottom="16dp"/>
 
@@ -48,14 +48,14 @@
                 android:id="@+id/rbRed"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="위험 스팸 — 피싱·불법 도박·성인"
+                android:text="@string/tag_red"
                 android:textColor="#D32F2F"/>
 
             <RadioButton
                 android:id="@+id/rbYellow"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="마케팅 문자 — 광고·홍보"/>
+                android:text="@string/tag_yellow"/>
 
         </RadioGroup>
 
@@ -66,13 +66,21 @@
             android:gravity="top"
             android:hint="받은 문자 내용 (선택) — 검증 정확도가 올라갑니다"
             android:inputType="textMultiLine"
-            android:layout_marginBottom="24dp"/>
+            android:layout_marginBottom="12dp"/>
+
+        <CheckBox
+            android:id="@+id/cbShareServer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/share_to_server"
+            android:checked="true"
+            android:layout_marginBottom="16dp"/>
 
         <Button
             android:id="@+id/btnSubmitReport"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/action_report"/>
+            android:text="@string/report_submit"/>
 
     </LinearLayout>
 </ScrollView>

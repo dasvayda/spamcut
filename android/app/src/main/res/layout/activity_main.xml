@@ -1,68 +1,217 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/app_name"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
-
-    <TextView
-        android:id="@+id/tvBalance"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="잔액: — token"
-        android:textSize="16sp"
-        android:layout_marginBottom="4dp"/>
-
-    <TextView
-        android:id="@+id/tvSubscriptionStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="구독 상태를 불러오는 중…"
-        android:textSize="14sp"
-        android:layout_marginBottom="4dp"/>
-
-    <TextView
-        android:id="@+id/tvOverlayStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:layout_marginBottom="24dp"/>
-
-    <!-- 주 진입점 — 수신 번호가 자동으로 쌓이는 목록 -->
-    <Button
-        android:id="@+id/btnRecent"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/recent_title"
-        android:layout_marginBottom="12dp"/>
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <Button
-        android:id="@+id/btnReport"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="번호 직접 신고하기"
-        android:layout_marginBottom="12dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
 
-    <Button
-        android:id="@+id/btnWallet"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="지갑 · 구독"
-        android:layout_marginBottom="12dp"/>
+        <TextView
+            android:id="@+id/tvBalance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/home_balance_placeholder"
+            android:textSize="16sp"
+            android:layout_marginBottom="4dp"/>
 
-    <Button
-        android:id="@+id/btnGrantOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="오버레이 권한 허용"/>
+        <TextView
+            android:id="@+id/tvSubscriptionStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/home_sub_loading"
+            android:textSize="14sp"
+            android:layout_marginBottom="20dp"/>
 
-</LinearLayout>
+        <LinearLayout
+            android:id="@+id/cardLookupPrompt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="?attr/colorSurface"
+            android:elevation="2dp"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvPromptKind"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="13sp"
+                android:textColor="?attr/colorPrimary"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/tvPromptNumber"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginTop="6dp"/>
+
+            <TextView
+                android:id="@+id/tvPromptPreview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="13sp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:layout_marginTop="4dp"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/tvPromptQuestion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/lookup_prompt_question"
+                android:textSize="15sp"
+                android:layout_marginTop="12dp"/>
+
+            <TextView
+                android:id="@+id/tvLookupResult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"/>
+
+            <Button
+                android:id="@+id/btnLookupNow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/lookup_prompt_yes"
+                android:layout_marginTop="12dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/save_tag_label"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"/>
+
+            <RadioGroup
+                android:id="@+id/rgSaveTag"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <RadioButton
+                    android:id="@+id/rbSaveRed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tag_red"/>
+
+                <RadioButton
+                    android:id="@+id/rbSaveYellow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tag_yellow"/>
+            </RadioGroup>
+
+            <CheckBox
+                android:id="@+id/cbShareServer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/share_to_server"
+                android:checked="true"
+                android:layout_marginTop="4dp"/>
+
+            <Button
+                android:id="@+id/btnSaveToList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/save_to_list"
+                android:layout_marginTop="8dp"/>
+
+            <Button
+                android:id="@+id/btnLookupLater"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/lookup_prompt_later"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvPromptEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/lookup_prompt_empty"
+            android:textSize="14sp"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:id="@+id/cardCrowdSync"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="?attr/colorSurface"
+            android:elevation="2dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sync_card_title"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sync_card_body"
+                android:textSize="13sp"
+                android:layout_marginTop="6dp"/>
+
+            <CheckBox
+                android:id="@+id/cbCrowdSync"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sync_card_check"
+                android:checked="false"
+                android:layout_marginTop="8dp"/>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnMyList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/my_list_title"
+            android:layout_marginBottom="12dp"/>
+
+        <Button
+            android:id="@+id/btnRecent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/recent_title"
+            android:layout_marginBottom="12dp"/>
+
+        <Button
+            android:id="@+id/btnReport"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/home_add_manual"
+            android:layout_marginBottom="12dp"/>
+
+        <Button
+            android:id="@+id/btnWallet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/home_wallet"/>
+
+    </LinearLayout>
+</ScrollView>

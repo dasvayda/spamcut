@@ -16,6 +16,9 @@ abstract class RecentContactDao {
     @Query("SELECT * FROM recent_contacts ORDER BY last_received_at DESC LIMIT :limit")
     abstract suspend fun getRecent(limit: Int): List<RecentContact>
 
+    @Query("SELECT * FROM recent_contacts ORDER BY last_received_at DESC LIMIT 1")
+    abstract suspend fun getLatest(): RecentContact?
+
     @Query("SELECT * FROM recent_contacts WHERE phone_number = :phoneNumber LIMIT 1")
     abstract suspend fun findByPhoneNumber(phoneNumber: String): RecentContact?
 
@@ -40,6 +43,9 @@ abstract class RecentContactDao {
 
     @Query("UPDATE recent_contacts SET reported_at = :reportedAt WHERE phone_number = :phoneNumber")
     abstract suspend fun markReported(phoneNumber: String, reportedAt: Long)
+
+    @Query("UPDATE recent_contacts SET prompt_dismissed_at = :dismissedAt WHERE phone_number = :phoneNumber")
+    abstract suspend fun markPromptDismissed(phoneNumber: String, dismissedAt: Long)
 
     // 수신 1건 기록 — 같은 번호면 횟수만 누적하고 마지막 수신 정보를 갱신한다
     @Transaction

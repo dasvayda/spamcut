@@ -89,4 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_spam_reports_phone ON spam_reports(phone_number);
 CREATE INDEX IF NOT EXISTS idx_spam_reports_reporter ON spam_reports(reporter_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_token_ledger_user ON token_ledger(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_spam_master_status ON spam_master(global_status);
+CREATE INDEX IF NOT EXISTS idx_spam_master_active_updated
+  ON spam_master (updated_at)
+  WHERE global_status = 'ACTIVE';
 CREATE INDEX IF NOT EXISTS idx_fcm_tokens_user ON fcm_tokens(user_id);

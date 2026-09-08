@@ -20,13 +20,6 @@
         android:textSize="13sp"
         android:layout_marginBottom="12dp"/>
 
-    <Button
-        android:id="@+id/btnRefreshAll"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/action_refresh"
-        android:layout_marginBottom="12dp"/>
-
     <TextView
         android:id="@+id/tvRecentEmpty"
         android:layout_width="match_parent"

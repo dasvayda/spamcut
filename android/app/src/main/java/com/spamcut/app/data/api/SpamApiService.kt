@@ -2,10 +2,16 @@ package com.spamcut.app.data.api
 
 import retrofit2.http.*
 
+data class MyReportInfo(
+    val status: String? = null,
+    val tagType: String? = null,
+)
+
 data class SpamCheckResponse(
     val isSpam: Boolean,
     val tagType: String? = null,
     val score: Int? = null,
+    val myReport: MyReportInfo? = null,
 )
 
 // 최근 수신 내역 "최신 정보 받기" — 여러 번호를 한 번에 조회
@@ -63,10 +69,31 @@ data class TxHistoryItem(
 
 data class FcmTokenRequest(val token: String)
 
+data class ConfirmedSpamItem(
+    val phone_number: String,
+    val tag_type: String,
+    val updated_at: String,
+)
+
+data class ConfirmedSpamResponse(
+    val items: List<ConfirmedSpamItem>,
+    val next_since: String? = null,
+)
+
 interface SpamApiService {
 
     @GET("api/v1/check-spam")
-    suspend fun checkSpam(@Query("number") number: String): SpamCheckResponse
+    suspend fun checkSpam(
+        @Query("number") number: String,
+        @Header("Authorization") bearer: String? = null,
+    ): SpamCheckResponse
+
+    @GET("api/v1/spam/confirmed")
+    suspend fun getConfirmedSpam(
+        @Header("Authorization") bearer: String,
+        @Query("since") since: String? = null,
+        @Query("limit") limit: Int = 500,
+    ): ConfirmedSpamResponse
 
     @POST("api/v1/check-spam/batch")
     suspend fun checkSpamBatch(@Body body: BatchCheckRequest): BatchCheckResponse

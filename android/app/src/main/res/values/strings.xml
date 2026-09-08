@@ -3,17 +3,12 @@
     <string name="app_name">SpamCut</string>
 
     <!-- 최근 수신 내역 화면 -->
-    <string name="recent_title">최근 수신 내역</string>
-    <string name="recent_subtitle">이 기기로 온 문자·전화입니다. 신고하기 전까지 서버로 전송되지 않습니다.</string>
-    <string name="recent_empty">아직 수신 내역이 없습니다.\n문자나 전화를 받으면 여기에 자동으로 쌓입니다.</string>
+    <string name="recent_title">받은 번호</string>
+    <string name="recent_subtitle">이 기기로 온 문자·전화입니다. 내 목록에 넣기 전까지는 서버로 전송되지 않습니다.</string>
+    <string name="recent_empty">아직 받은 번호가 없습니다.\n문자나 전화를 받으면 여기에 자동으로 쌓입니다.</string>
 
     <!-- 3개 액션 메뉴 — 방향이 드러나는 이름 -->
-    <string name="action_report">신고하기</string>
-    <string name="action_report_hint">내 기기 → 서버. 이 번호를 스팸으로 등록합니다.</string>
-    <string name="action_share">공유하기</string>
-    <string name="action_share_hint">친구에게 이 번호를 알립니다.</string>
-    <string name="action_refresh">최신 정보 받기</string>
-    <string name="action_refresh_hint">서버 → 내 기기. 최신 스팸 판정을 가져옵니다.</string>
+    <string name="action_add_to_list">내 목록에 넣기</string>
     <string name="action_delete">목록에서 지우기</string>
 
     <!-- 상태 배지 -->
@@ -26,4 +21,57 @@
     <string name="recent_refresh_done">최신 정보를 받았습니다 (%1$d건 갱신)</string>
     <string name="recent_refresh_failed">서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.</string>
     <string name="recent_deleted">목록에서 지웠습니다</string>
+
+    <string name="home_balance_placeholder">잔액: — token</string>
+    <string name="home_sub_loading">구독 상태를 불러오는 중…</string>
+    <string name="home_sub_active">구독: 활성 (%1$d일 남음)</string>
+    <string name="home_sub_inactive">구독: 비활성 — 지갑에서 활성화</string>
+    <string name="home_add_manual">번호 직접 넣기</string>
+    <string name="home_wallet">지갑 · 구독</string>
+
+    <string name="save_tag_label">이 번호를 무엇으로 넣을까요?</string>
+    <string name="tag_red">위험 스팸 — 피싱·불법 도박·성인</string>
+    <string name="tag_yellow">마케팅 문자 — 광고·홍보</string>
+    <string name="share_to_server">서버에도 등록 (다른 사람에게 알리기)</string>
+    <string name="save_to_list">내 목록에 넣기</string>
+    <string name="save_need_tag">위험인지 광고인지 골라 주세요</string>
+    <string name="save_done_local">내 목록에만 저장했습니다</string>
+    <string name="save_done_shared">내 목록에 넣고, 서버에도 등록했습니다</string>
+    <string name="save_done_queued">내 목록에 저장했습니다. 연결되면 서버로 보냅니다</string>
+    <string name="save_done_duplicate">내 목록에 저장했습니다. 이미 등록된 신고입니다</string>
+    <string name="save_done_limit">내 목록에 저장했습니다. 오늘 서버 등록 한도를 넘었습니다</string>
+
+    <string name="sync_card_title">다른 사람이 확인한 번호 받아오기</string>
+    <string name="sync_card_body">켜면 서버에 확정된 스팸 목록을 이 폰으로 받습니다. 내 목록과는 따로 보관되고, 끄면 받아 온 목록은 보이지 않습니다. 점수는 내 번호를 서버에 등록할 때만 쌓입니다.</string>
+    <string name="sync_card_check">확정된 목록 받아오기</string>
+    <string name="sync_on_toast">받아오기를 켰습니다. 백그라운드에서 목록을 받습니다.</string>
+    <string name="sync_off_toast">받아오기를 껐습니다. 내 목록은 그대로입니다.</string>
+
+    <string name="my_list_title">내 목록</string>
+    <string name="my_list_empty">아직 넣은 번호가 없습니다.\n받은 번호를 내 목록에 넣으면 여기에 쌓입니다.</string>
+    <string name="synced_list_title">받아 온 번호</string>
+    <string name="synced_list_empty">아직 받아 온 번호가 없습니다.</string>
+    <string name="synced_hidden">받아오기가 꺼져 있어 이 목록은 숨겼습니다.</string>
+    <string name="status_local_only">내 폰만</string>
+    <string name="status_shared">서버 등록됨</string>
+    <string name="status_from_crowd">받아 온 번호</string>
+    <string name="action_copy_to_mine">내 목록에도 넣기</string>
+    <string name="copy_to_mine_hint">받아 온 번호는 서버에 다시 올리지 않습니다.</string>
+
+    <string name="report_screen_title">내 목록에 넣기</string>
+    <string name="report_screen_subtitle">기본적으로 이 폰의 전화번호부에 저장합니다. 아래 칸을 켜 두면 서버에도 등록됩니다.</string>
+    <string name="report_submit">저장</string>
+
+    <string name="lookup_prompt_kind_sms">방금 받은 문자</string>
+    <string name="lookup_prompt_kind_call">방금 받은 전화</string>
+    <string name="lookup_prompt_question">이 번호가 스팸인지 조회할까요?</string>
+    <string name="lookup_prompt_yes">이 번호 조회하기</string>
+    <string name="lookup_prompt_later">나중에</string>
+    <string name="lookup_prompt_empty">문자나 전화를 받으면, 앱을 열었을 때 여기서 조회할 수 있습니다.</string>
+    <string name="lookup_prompt_looking">조회 중…</string>
+    <string name="lookup_result_red">위험 스팸으로 등록된 번호입니다.</string>
+    <string name="lookup_result_yellow">마케팅 문자로 등록된 번호입니다.</string>
+    <string name="lookup_result_pending">내가 신고함 · 아직 검증 전입니다.</string>
+    <string name="lookup_result_safe">등록된 스팸 정보가 없습니다.</string>
+    <string name="lookup_result_failed">조회에 실패했습니다. 네트워크를 확인해 주세요.</string>
 </resources>

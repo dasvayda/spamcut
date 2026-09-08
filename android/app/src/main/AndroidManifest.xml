@@ -48,6 +48,7 @@
         </activity>
 
         <activity android:name=".ui.RecentActivity" android:exported="false" />
+        <activity android:name=".ui.MyListActivity" android:exported="false" />
         <activity android:name=".ui.ReportActivity" android:exported="false" />
         <activity android:name=".ui.WalletActivity" android:exported="false" />
         <activity android:name=".ui.OnboardingActivity" android:exported="true">
@@ -60,7 +61,7 @@
             </intent-filter>
         </activity>
 
-        <!-- SMS BroadcastReceiver — highest priority to intercept before stock SMS app -->
+        <!-- SMS 수신 — 발신번호만 로컬에 기록. 실시간 경고는 하지 않음 -->
         <receiver
             android:name=".receiver.SmsReceiver"
             android:exported="true"
@@ -79,9 +80,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- 수신 전화 스팸 경고 — 사전(proactive) 알림
-             RINGING 상태에서 오버레이 + 알림 표시 (RED/YELLOW 모두)
-             IDLE 상태에서 오버레이 자동 닫기 -->
+        <!-- 수신 전화 — 발신번호만 로컬에 기록. RED 거절은 CallScreeningService -->
         <receiver
             android:name=".receiver.PhoneStateReceiver"
             android:exported="false">

@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth'
 import {
   checkSpam,
   checkSpamBatch,
+  listConfirmedSpam,
   submitReport,
   penalizeReporter,
 } from '../controllers/spamController'
@@ -47,6 +48,20 @@ export async function spamRoutes(fastify: FastifyInstance) {
     const results = await checkSpamBatch(parse.data.numbers)
     return reply.send({ results })
   })
+
+  // GET /api/v1/spam/confirmed?since=<ISO>&limit=500
+  // 동기화 동의 후 확정 목록을 폰으로 받는다. 점수는 포함하지 않는다.
+  fastify.get<{ Querystring: { since?: string; limit?: string } }>(
+    '/spam/confirmed',
+    { preHandler: [requireAuth] },
+    async (request, reply) => {
+      const limitRaw = parseInt(request.query.limit ?? '500', 10)
+      const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 500
+      const since = request.query.since
+      const result = await listConfirmedSpam(since, limit)
+      return reply.send(result)
+    },
+  )
 
   // POST /api/v1/report
   fastify.post('/report', { preHandler: [requireAuth] }, async (request, reply) => {

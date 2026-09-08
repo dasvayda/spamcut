@@ -81,11 +81,9 @@
 
 ### 접근성 — 최근 수신 내역 기반 신고 (앱 내 완결)
 - [x] **수신 번호 로컬 자동 저장** — `recent_contacts` Room 테이블 + `SmsReceiver`/`PhoneStateReceiver`가 구독 여부와 무관하게 발신 번호·문자 미리보기 기록 (30일 보관, `CacheEvictionWorker` 정리)
-- [x] **최근 수신 내역 화면** — `RecentActivity`: 번호별 상태(위험/마케팅/안전/확인 필요/신고함) + 수신 요약 목록
-- [x] **3개 액션 메뉴** — 데이터 방향이 드러나는 네이밍
-  - **신고하기** (내 기기 → 서버) — 번호·문자 내용 자동 입력된 신고 화면, 오프라인이면 큐에 저장 후 자동 재전송
-  - **공유하기** (내 기기 → 친구) — 시스템 공유 시트, 판정 결과 + 서비스 링크
-  - **최신 정보 받기** (서버 → 내 기기) — 목록 전체 판정 일괄 갱신
+- [x] **최근 수신 내역 화면** — `RecentActivity`: 받은 번호 로그 + 내 목록에 넣기
+- [x] **내 목록 / 서버 등록 체크** — 저장 시 기본 ON, 수신 즉시 업로드 없음. 점수는 `POST /report` 만
+- [x] **확정 목록 동기화** — 홈 카드 기본 OFF, `GET /api/v1/spam/confirmed` → `synced_spam_numbers` (내 목록과 분리)
 - [x] **배치 조회 API** — `POST /api/v1/check-spam/batch` (최대 100건, Redis 캐시 우선)
 - [x] **E.164 정규화 유틸** — `PhoneNumbers.kt`: 통신사가 주는 제각각인 번호 형식을 저장 시점에 통일
 
@@ -197,31 +195,24 @@
 
 ## 알림(Alert) 설계 메모
 
-### SMS 알림
-| 방식 | 구현 | 비고 |
-|------|------|------|
-| **사전** — 수신 즉시 (`SmsReceiver` priority 999 → OverlayService + 알림) | ✅ 완료 | 구독자만 작동 |
-| 사후 — 미구현 | — | 사전이 커버하므로 불필요 |
+실시간 오버레이 경고는 쓰지 않는다. 문자·전화가 오면 번호만 기기에 남기고, 앱을 열었을 때 조회를 권유한다.
 
-### 전화 알림
+### SMS / 전화
 | 방식 | 구현 | 비고 |
 |------|------|------|
-| **사전 경고** — 전화 울리는 중 (`PhoneStateReceiver` RINGING → OverlayService 30초 자동닫기 + 알림) | ✅ 완료 | RED/YELLOW 모두 |
-| **사전 차단** — RED 자동 거절 (`CallScreeningService`) | ✅ 완료 | 사용자가 기본 스팸 차단 앱으로 설정 필요 |
-| 사후 — 미구현 | — | 사전이 커버하므로 현 단계에서 불필요 |
+| **기록** — 수신 즉시 (`SmsReceiver` / `PhoneStateReceiver` → `recent_contacts`) | ✅ 완료 | 서버 조회 없음 |
+| **조회·저장 권유** — 앱 홈 (조회 + 내 목록에 넣기, 서버 등록 체크 기본 ON) | ✅ 완료 | 수신 즉시 업로드 없음 |
+| **목록 받아오기** — 홈 카드 기본 OFF (`GET /spam/confirmed`) | ✅ 완료 | 내 목록과 분리 |
+| **사전 차단** — RED 자동 거절 (`CallScreeningService`) | ✅ 완료 | 기본 스팸 차단 앱 설정 필요 |
 
 ### 역할 분리 원칙
-- `PhoneStateReceiver`: **시각적 경고** 담당 (오버레이 + 알림, RED/YELLOW)
-- `CallScreeningService`: **자동 차단** 담당 (거절 결정, RED만)
-- `SmsReceiver`: **SMS 감지 + 경고** 담당
-- `OverlayService`: `EXTRA_AUTO_DISMISS_MS` 인자로 자동 닫기 제어
-  - SMS: 0(수동 닫기), 전화: 30초 자동 닫기
+- `SmsReceiver` / `PhoneStateReceiver`: **로컬 기록만**
+- `MainActivity`: **앱을 열었을 때 조회 권유**
+- `CallScreeningService`: **RED 자동 차단** (경고창이 아님)
 
 ### 주요 Android 제약
-- `PhoneStateReceiver` + `EXTRA_INCOMING_NUMBER`: Android 9 이전에는 누구나 읽을 수 있었으나,
-  Android 9부터 `READ_CALL_LOG` 또는 `READ_PHONE_STATE` 권한 필요 (이미 보유)
-- `CallScreeningService`: 사용자가 설정에서 직접 SpamCut를 선택해야 활성화됨
-- 오버레이(`TYPE_APPLICATION_OVERLAY`): `SYSTEM_ALERT_WINDOW` 권한 + 사용자 허용 필요
+- `PhoneStateReceiver` + `EXTRA_INCOMING_NUMBER`: Android 9부터 `READ_PHONE_STATE` 필요
+- `CallScreeningService`: 사용자가 설정에서 SpamCut를 기본 스팸 차단 앱으로 선택해야 함
 
 ---
 
@@ -230,5 +221,5 @@
 - **Token 부트스트래핑** — 가입 시 5 token 선지급으로 해결. 초대 완료 시 초대자 +3 추가
 - **Aggregate score 조정** — 현재 공식 `reputation / 20` → 가중치 1–5, 임계값 50. 실데이터 수집 후 A/B 튜닝 필요
 - **Token은 포인트, 블록체인은 나중에** — Stage 5 전까지 서비스 내부 포인트로만 운영
-- **Android 14+ 오버레이** — `TYPE_APPLICATION_OVERLAY` 동작 변경; API 34 기기 잠금화면 해제 후 동작 확인 필요
+- **조회 권유 UX** — 수신 즉시 경고 대신 앱 오픈 시 최신 번호 조회. 새 수신이면 다시 안내
 - **Railway Redis** — Stage 3 도입 시 Railway 대시보드에서 Redis 플러그인 추가 (클릭 몇 번)

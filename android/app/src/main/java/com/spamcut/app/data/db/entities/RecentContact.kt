@@ -46,7 +46,16 @@ data class RecentContact(
     // 내가 이 번호를 신고한 시각 — 중복 신고 방지 및 목록 표시용
     @ColumnInfo(name = "reported_at")
     val reportedAt: Long? = null,
+
+    // 홈 화면 조회 안내를 미룬 시각. 새 수신이 오면 lastReceivedAt 이 더 커져 다시 안내한다.
+    @ColumnInfo(name = "prompt_dismissed_at")
+    val promptDismissedAt: Long = 0,
 ) {
     // 아직 서버 확인 전인지 여부 — 목록에서 "확인 필요"로 표시
     fun isUnchecked(): Boolean = checkedAt == 0L
+
+    fun shouldOfferLookup(): Boolean {
+        val lastSeen = maxOf(checkedAt, promptDismissedAt)
+        return lastReceivedAt > lastSeen
+    }
 }

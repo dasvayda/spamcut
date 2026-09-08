@@ -39,6 +39,15 @@ class PendingReportWorker @AssistedInject constructor(
                     ),
                 )
                 dao.delete(report)
+                db.mySpamNumberDao().markShared(report.phoneNumber, System.currentTimeMillis())
+            } catch (e: retrofit2.HttpException) {
+                if (e.code() == 409) {
+                    dao.delete(report)
+                    db.mySpamNumberDao().markShared(report.phoneNumber, System.currentTimeMillis())
+                } else {
+                    dao.incrementRetry(report.id)
+                    allSuccess = false
+                }
             } catch (e: Exception) {
                 dao.incrementRetry(report.id)
                 allSuccess = false

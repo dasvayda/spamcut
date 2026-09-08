@@ -33,11 +33,14 @@ object PhoneNumbers {
 
     fun isE164(value: String): Boolean = E164_PATTERN.matches(value)
 
-    // 화면 표시용 — +8210... 을 010... 형태로 되돌린다 (국내 번호만)
-    fun toDisplay(e164: String): String =
-        if (e164.startsWith("+$DEFAULT_COUNTRY_CODE")) {
-            "0" + e164.removePrefix("+$DEFAULT_COUNTRY_CODE")
+    // 화면 표시용 — +8210... 을 010-1234-5678 형태로 되돌린다 (국내 휴대폰)
+    fun toDisplay(e164: String): String {
+        if (!e164.startsWith("+$DEFAULT_COUNTRY_CODE")) return e164
+        val rest = "0" + e164.removePrefix("+$DEFAULT_COUNTRY_CODE")
+        return if (rest.length == 11 && rest.startsWith("010")) {
+            "${rest.substring(0, 3)}-${rest.substring(3, 7)}-${rest.substring(7)}"
         } else {
-            e164
+            rest
         }
+    }
 }
